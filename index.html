@@ -1,10 +1,28 @@
-TOCCARE SOTTO
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TCMS NEXUS</title>
+</head>
 
+<body>
+
+<h1>TCMS NEXUS ATTIVO</h1>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+// 🔴 DATI
+const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co"
+const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t"
+
+// 🔴 CLIENT
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey)
 
-console.log("✅ TCMS connesso:", supabaseClient)
+// ✅ TEST VISIVO
+document.body.innerHTML += "<p>✅ TCMS CONNESSO OK</p>"
 
 </script>
 
 </body>
-</html
+</html>
