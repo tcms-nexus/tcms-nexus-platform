@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101827" />
+  <title>TCMS NEXUS</title>
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#121c2e;--panel2:#18253b;--text:#eef4ff;--muted:#9eb0cc;
+      --accent:#4f8cff;--good:#37c77f;--warn:#ffbd4a;--bad:#ff667a;--border:#263753;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select,textarea{font:inherit}
+    .app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+    aside{background:#0e1727;border-right:1px solid var(--border);padding:20px;position:sticky;top:0;height:100vh}
+    .brand{font-weight:800;font-size:22px;margin-bottom:6px}.sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+    nav button{width:100%;text-align:left;background:transparent;color:var(--text);border:0;padding:12px;border-radius:10px;margin:3px 0;cursor:pointer}
+    nav button.active,nav button:hover{background:var(--panel2)}
+    main{padding:24px;max-width:1400px;width:100%}
+    .top{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .search{flex:1;max-width:650px;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:12px}
+    .btn{background:var(--accent);color:white;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .btn.secondary{background:var(--panel2)} .btn.danger{background:var(--bad)} .btn.good{background:var(--good)}
+    .urgent{border-color:var(--bad)!important;box-shadow:0 0 0 1px rgba(255,102,122,.25)}
+    .today{border-color:var(--warn)!important}.small{font-size:12px}.muted{color:var(--muted)}
+    .quickbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}.pill{display:inline-block;padding:4px 9px;border-radius:999px;background:var(--panel2);font-size:12px}
+    .command{border-left:4px solid var(--accent);margin-bottom:12px}
+    .command.critical{border-left-color:var(--bad)}
+    .command.today-action{border-left-color:var(--warn)}
+    .command.ready{border-left-color:var(--good)}
+    .command-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .command-title{font-weight:800;font-size:16px}
+    .command-meta{color:var(--muted);font-size:12px;margin-top:5px}
+    .command-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .btn.smallbtn{padding:7px 10px;font-size:12px}
+    .empty-focus{padding:22px;text-align:center;color:var(--muted)}
+    .focus-banner{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px}
+    .focus-banner strong{font-size:18px}
+    @media(max-width:700px){
+      .command-head,.focus-banner{display:block}
+      .command-actions{margin-top:10px}
+    }
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+    .kpi{font-size:30px;font-weight:800}.label{color:var(--muted);font-size:13px}
+    h1,h2,h3{margin-top:0}.section{display:none}.section.active{display:block}
+    table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    th,td{padding:11px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+    th{color:var(--muted);font-size:12px;text-transform:uppercase}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .status{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--panel2);font-size:12px}
+    dialog{border:1px solid var(--border);border-radius:14px;background:var(--panel);color:var(--text);max-width:650px;width:94%;padding:0}
+    dialog::backdrop{background:rgba(0,0,0,.7)}
+    .modal{padding:20px}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form .full{grid-column:1/-1}
+    input,select,textarea{width:100%;background:#0e1727;color:var(--text);border:1px solid var(--border);padding:10px;border-radius:9px}
+    textarea{min-height:90px}.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+    .empty{color:var(--muted);padding:24px;text-align:center}
+    .ai-box{display:grid;grid-template-columns:1fr auto;gap:10px}.ai-output{white-space:pre-wrap;line-height:1.5}
+    .timeline-item{border-left:3px solid var(--accent);padding:8px 12px;margin:8px 0;background:var(--panel)}
+    .mobilebar{display:none}
+    @media(max-width:900px){
+      .app{grid-template-columns:1fr} aside{display:none}
+      main{padding:14px 12px 80px}.grid{grid-template-columns:repeat(2,1fr)}
+      .mobilebar{display:flex;position:fixed;bottom:0;left:0;right:0;background:#0e1727;border-top:1px solid var(--border);z-index:5}
+      .mobilebar button{flex:1;background:none;color:var(--text);border:0;padding:12px 4px;font-size:12px}
+      .form{grid-template-columns:1fr}.form .full{grid-column:auto}
+      table{font-size:13px;display:block;overflow-x:auto}
+    }
+  
+    .startup-compact{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#14213a;border-bottom:1px solid #263753;padding:8px 12px;color:#eef4ff;font-family:Inter,system-ui,Arial,sans-serif;font-size:13px}
+    .startup-compact button{border:0;background:transparent;color:#eef4ff;font-size:22px;line-height:1;cursor:pointer}
+    .dashboard-hero{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+    .dashboard-hero h1{margin:0}
+    .fab{position:fixed;right:18px;bottom:76px;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;font-weight:300;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:12;cursor:pointer}
+    .fab-menu{position:fixed;right:18px;bottom:144px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px;z-index:13;display:none;min-width:190px;box-shadow:0 12px 34px rgba(0,0,0,.4)}
+    .fab-menu.open{display:block}
+    .fab-menu button{display:block;width:100%;text-align:left;margin:4px 0}
+    .compact-kpis .card{padding:12px}
+    .compact-kpis .kpi{font-size:26px}
+    .compact-kpis .label{font-size:12px}
+    @media(max-width:900px){
+      .dashboard-hero{align-items:flex-start}
+      main{padding-top:14px}
+      .grid.compact-kpis{grid-template-columns:repeat(2,1fr)}
+      .fab{bottom:72px}
+      .startup-compact{font-size:12px}
+    }
+
+</style>
+</head>
+<body>
+
+<div id="startupNote" class="startup-compact">
+      <span><b>TCMS NEXUS</b> · Dati salvati automaticamente sul dispositivo</span>
+      <button onclick="this.parentElement.style.display='none'" aria-label="Chiudi avviso">×</button>
+    </div>
+
+<div class="app">
+  <aside>
+    <div class="brand">TCMS NEXUS</div>
+    <div class="sub">Centro operativo condiviso del team</div>
+    <nav id="nav"></nav>
+  </aside>
+  <main>
+    <div class="top">
+      <input id="globalSearch" class="search" placeholder="Ricerca globale: persone, aziende, candidature, task..." />
+      <button class="btn secondary" onclick="exportData()">Backup</button>
+    </div>
+
+    <section id="dashboard" class="section active">
+      <div class="dashboard-hero">
+        <h1>Dashboard</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn secondary" onclick="document.getElementById('nextActions').scrollIntoView({behavior:'smooth',block:'start'})">Agenda</button>
+          <button class="btn secondary" onclick="toggleFabMenu()">+ Inserisci</button>
+        </div>
+      </div>
+      <div class="quickbar"><button class="btn" onclick="openForm('recruiters')">+ Recruiter</button><button class="btn" onclick="openForm('companies')">+ Azienda</button><button class="btn" onclick="openForm('people')">+ Persona</button><button class="btn" onclick="openForm('applications')">+ Candidatura</button><button class="btn good" onclick="openForm('tasks')">+ Follow-up</button></div><div class="grid compact-kpis" id="kpis"></div>
+      <div style="height:18px"></div>
+      <div class="card focus-banner">
+        <div><strong>Comando immediato</strong><div class="label">TCMS NEXUS ordina automaticamente ciò che richiede attenzione adesso.</div></div>
+        <button class="btn secondary" onclick="showSection('sofia');setTimeout(()=>askSofia(),0)">Analisi Sofia</button>
+      </div>
+      <div class="grid" style="grid-template-columns:2fr 1fr">
+        <div class="card"><h3>Agenda operativa</h3><div id="nextActions"></div></div>
+        <div class="card"><h3>Stato candidature</h3><div id="applicationSummary"></div></div>
+      </div>
+      <div style="height:18px"></div>
+      <div class="card"><h3>Attività recente</h3><div id="timeline"></div></div>
+    </section>
+
+    <section id="recruiters" class="section"><h1>Recruiter</h1><div class="toolbar"><button class="btn" onclick="openForm('recruiters')">+ Nuovo recruiter</button></div><div id="recruitersTable"></div></section>
+    <section id="companies" class="section"><h1>Aziende</h1><div class="toolbar"><button class="btn" onclick="openForm('companies')">+ Nuova azienda</button></div><div id="companiesTable"></div></section>
+    
+    <section id="people" class="section"><h1>Persone e contatti</h1><div class="toolbar"><button class="btn" onclick="openForm('people')">+ Nuovo contatto</button></div><div id="peopleTable"></div></section>
+    <section id="sites" class="section"><h1>Cantieri</h1><div class="toolbar"><button class="btn" onclick="openForm('sites')">+ Nuovo cantiere</button></div><div id="sitesTable"></div></section>
+
+    <section id="applications" class="section"><h1>Candidature</h1><div class="toolbar"><button class="btn" onclick="openForm('applications')">+ Nuova candidatura</button></div><div id="applicationsTable"></div></section>
+    <section id="tasks" class="section"><h1>Task e follow-up</h1><div class="toolbar"><button class="btn" onclick="openForm('tasks')">+ Nuovo task</button></div><div id="tasksTable"></div></section>
+    <section id="documents" class="section"><h1>Documenti</h1><div class="toolbar"><button class="btn" onclick="openForm('documents')">+ Registra documento</button></div><div id="documentsTable"></div></section>
+
+    <section id="sofia" class="section">
+      <h1>Sofia AI — Assistente operativo</h1>
+      <div class="card">
+        <p class="label">Versione locale: analizza i dati presenti nell'app e produce un riepilogo operativo.</p>
+        <div class="ai-box">
+          <input id="aiPrompt" placeholder="Esempio: cosa devo fare oggi? / fammi il punto sui recruiter" />
+          <button class="btn" onclick="askSofia()">Analizza</button>
+        </div>
+        <div style="height:14px"></div>
+        <div id="aiOutput" class="ai-output">Pronta. Inserisci dati e chiedimi un riepilogo.</div>
+      </div>
+    </section>
+
+    <section id="backup" class="section">
+      <h1>Backup e ripristino</h1>
+      <div class="card">
+        <p>Esporta tutti i dati in un file JSON oppure ripristina un backup precedente.</p>
+        <div class="toolbar">
+          <button class="btn" onclick="exportData()">Esporta backup JSON</button><button class="btn secondary" onclick="exportCSV()">Esporta riepilogo CSV</button>
+          <label class="btn secondary">Importa backup<input type="file" accept=".json" hidden onchange="importData(event)"></label>
+          <button class="btn danger" onclick="resetData()">Azzera dati</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="mobilebar" id="mobilebar"></div>
+
+<dialog id="formDialog"><div class="modal">
+  <h2 id="formTitle"></h2>
+  <form id="entityForm"><div id="formFields" class="form"></div>
+    <div class="actions"><button type="button" class="btn secondary" onclick="formDialog.close()">Annulla</button><button class="btn" type="submit">Salva</button></div>
+  </form>
+</div></dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const APP_VERSION='3.3';
+
+const sections = [
+ ['dashboard','Dashboard'],['recruiters','Recruiter'],['companies','Aziende'],
+ ['people','Persone'],['sites','Cantieri'],['applications','Candidature'],
+ ['tasks','Task'],['documents','Documenti'],['sofia','Sofia AI'],['backup','Backup']
+];
+const schema = {
+ recruiters:[
+  ['name','Nome','text'],['company','Azienda','text'],['role','Ruolo','text'],['specialization','Specializzazione','text'],['country','Paese','text'],['language','Lingua','text'],
+  ['linkedin','LinkedIn','url'],['email','Email','email'],['phone','Telefono/WhatsApp','text'],
+  ['status','Stato','select',['Da contattare','Invito inviato','Collegato','In conversazione','Stand-by','Chiuso']],
+  ['lastContact','Ultimo contatto','date'],['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+ ],
+ companies:[
+  ['name','Azienda','text'],['sector','Settore','text'],['country','Paese','text'],['website','Sito','url'],['manager','Manager/decision maker','text'],['email','Email','email'],['phone','Telefono','text'],
+  ['contact','Contatto principale','text'],['status','Stato','select',['Da studiare','Target','Contattata','In trattativa','Partner','Archiviata']],
+  ['notes','Note','textarea']
+ ],
+ applications:[
+  ['company','Azienda','text'],['role','Posizione','text'],['location','Località','text'],['source','Fonte/Link','text'],
+  ['date','Data candidatura','date'],['status','Stato','select',['Da inviare','Inviata','Visualizzata','Colloquio','Offerta','Rifiutata','Sospesa']],
+  ['salary','Retribuzione/condizioni','text'],['nextAction','Prossima azione','text'],['nextDate','Data follow-up','date'],['notes','Note','textarea']
+ ],
+ tasks:[
+  ['title','Attività','text'],['category','Categoria','select',['Recruiting','Candidatura','Documento','Tecnico','Amministrativo','Altro']],
+  ['priority','Priorità','select',['Alta','Media','Bassa']],['dueDate','Scadenza','date'],
+  ['status','Stato','select',['Da fare','In corso','Completato','In attesa']],['notes','Note','textarea']
+ ],
+ people:[
+  ['name','Nome e cognome','text'],['company','Azienda/Ente','text'],['role','Ruolo','text'],
+  ['email','Email','email'],['phone','Telefono/WhatsApp','text'],['linkedin','LinkedIn','url'],
+  ['relationship','Relazione','select',['Da conoscere','Contatto','Ex collega','Referente','Decision maker','Altro']],
+  ['status','Stato','select',['Attivo','Da ricontattare','Stand-by','Archiviato']],
+  ['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+ ],
+ sites:[
+  ['name','Nome cantiere/progetto','text'],['company','Azienda principale','text'],['location','Località','text'],
+  ['sector','Settore','select',['Tunnelling','Microtunnelling','Pipeline','Infrastrutture','Sollevamento','Altro']],
+  ['status','Stato','select',['Da verificare','Attivo','In avvio','Sospeso','Concluso']],
+  ['contact','Referente','text'],['opportunity','Opportunità/ruolo','text'],
+  ['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+ ],
+ documents:[
+  ['title','Documento','text'],['type','Tipo','text'],['expiry','Scadenza','date'],['location','Posizione/Link','text'],['notes','Note','textarea']
+ ]
+};
+let db = JSON.parse(localStorage.getItem('tcms_nexus_db') || 'null') || {
+ recruiters:[],companies:[],people:[],sites:[],applications:[],tasks:[],documents:[],timeline:[]
+};
+let currentType=null, editId=null, saving=false;
+
+
+async function save(){
+
+  localStorage.setItem('tcms_nexus_db', JSON.stringify(db));
+
+  // 🔥 INVIO A SUPABASE
+  
+
+  renderAll()
+}
+function addTimeline(text){db.timeline.unshift({id:crypto.randomUUID(),text,date:new Date().toISOString()});db.timeline=db.timeline.slice(0,100)}
+
+function toggleFabMenu(){
+  const m=document.getElementById('fabMenu');
+  if(m)m.classList.toggle('open');
+}
+function quickOpen(type){
+  const m=document.getElementById('fabMenu');
+  if(m)m.classList.remove('open');
+  showSection(type);
+  setTimeout(()=>openForm(type),0);
+}
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('fabMenu');
+  const fab=document.querySelector('.fab');
+  if(menu && menu.classList.contains('open') && !menu.contains(e.target) && e.target!==fab){
+    menu.classList.remove('open');
+  }
+});
+
+function showSection(id){
+ document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.id===id));
+}
+function buildNav(){
+ const nav=document.getElementById('nav'), mob=document.getElementById('mobilebar');
+ nav.innerHTML=sections.map(([id,l],i)=>`<button data-id="${id}" class="${i===0?'active':''}" onclick="showSection('${id}')">${l}</button>`).join('');
+ mob.innerHTML=sections.filter(x=>['dashboard','recruiters','applications','tasks','sofia'].includes(x[0])).map(([id,l])=>`<button onclick="showSection('${id}')">${l}</button>`).join('');
+}
+function openForm(type,id=null){
+ currentType=type;editId=id;
+ formTitle.textContent=(id?'Modifica ':'Nuovo ')+({recruiters:'recruiter',companies:'azienda',people:'contatto',sites:'cantiere',applications:'candidatura',tasks:'task',documents:'documento'}[type]);
+ const item=id?db[type].find(x=>x.id===id):{};
+ formFields.innerHTML=schema[type].map(([key,label,t,opts])=>{
+  let ctl='';
+  if(t==='select') ctl=`<select name="${key}">${opts.map(o=>`<option ${item[key]===o?'selected':''}>${o}</option>`).join('')}</select>`;
+  else if(t==='textarea') ctl=`<textarea name="${key}">${item[key]||''}</textarea>`;
+  else ctl=`<input name="${key}" type="${t}" value="${item[key]||''}">`;
+  return `<label class="${t==='textarea'?'full':''}"><span class="label">${label}</span>${ctl}</label>`;
+ }).join('');
+ formDialog.showModal();
+}
+entityForm.onsubmit = async (e) => {
+if (saving) return;
+ e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());
+ if(editId){Object.assign(db[currentType].find(x=>x.id===editId),data,{updatedAt:new Date().toISOString()});addTimeline(`Aggiornato: ${data.name||data.title||data.company||'elemento'}`)}
+ else{
+  const norm = v => String(v || '').trim().toLowerCase();
+
+const duplicate = currentType === 'applications' &&
+  db.applications.some(x =>
+    norm(x.company) === norm(data.company) &&
+    norm(x.position) === norm(data.position)
+  );
+
+// DISABILITATO CONTROLLO DUPLICATI
+   data.id=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));data.createdAt=new Date().toISOString();db[currentType].push(data);addTimeline(`Creato: ${data.name||data.title||data.company||'elemento'}`) 
+  if (saving) return;
+saving = true;
+alert("DEBUG SUPABASE");
+
+supabaseClient
+.from('applications')
+.insert([{
+  company: data.company,
+  position: data.position,
+  status: data.status
+}])
+.then(res => { 
+if (!res || res.error) return;
+ 
+db[currentType].unshift(data);
+  }
+  formDialog.close();
+renderAll();
+})
+  
+  
+ 
+
+})
+.catch(err => {
+  alert("Errore di connessione: " + err.message);
+})
+.finally(() => {
+  saving = false;
+});
+
+
+ // await supabaseClient
+   //.from('applications')
+   //.insert({
+    //  company: data.company,
+    //  position: data.position,
+  //    status: data.status
+  // });
+ }
+formDialog.close(); 
+};
+function removeItem(type,id){
+ if(!confirm('Eliminare questo elemento?'))return;
+ const item=db[type].find(x=>x.id===id);db[type]=db[type].filter(x=>x.id!==id);
+ addTimeline(`Eliminato: ${item?.name||item?.title||item?.company||'elemento'}`);save()
+}
+function table(type,cols){
+ const rows=db[type];
+ if(!rows.length)return `<div class="empty">Nessun dato presente.</div>`;
+ return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Azioni</th></tr></thead><tbody>`+
+ rows.map(r=>`<tr>${cols.map(([k])=>`<td>${formatCell(k,r[k])}</td>`).join('')}
+ <td><button class="btn secondary" onclick="openForm('${type}','${r.id}')">Modifica</button> <button class="btn danger" onclick="removeItem('${type}','${r.id}')">X</button></td></tr>`).join('')+
+ `</tbody></table>`
+}
+function formatCell(k,v){if(!v)return '—'; if(k==='status'||k==='priority')return `<span class="status">${escapeHtml(v)}</span>`; if(String(v).startsWith('http'))return `<a href="${v}" target="_blank" style="color:#82aaff">Apri</a>`; return escapeHtml(v)}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+function actionLabel(type,item){
+ if(type==='tasks') return item.title||'Task';
+ if(type==='recruiters') return (item.nextAction||'Ricontatta')+' — '+(item.name||'Recruiter');
+ if(type==='people') return (item.nextAction||'Ricontatta')+' — '+(item.name||'Persona');
+ if(type==='sites') return (item.nextAction||'Verifica')+' — '+(item.name||'Cantiere');
+ if(type==='applications') return (item.nextAction||'Follow-up')+' — '+(item.company||'Candidatura');
+ return 'Azione';
+}
+function openAction(type,id){
+ showSection(type);
+ setTimeout(()=>openForm(type,id),0);
+}
+function completeAction(type,id){
+ const item=db[type].find(x=>x.id===id);
+ if(!item)return;
+ if(type==='tasks') item.status='Completato';
+ else{
+   item.nextDate='';
+   item.nextAction='';
+   if(item.status==='Da ricontattare') item.status='Attivo';
+ }
+ item.updatedAt=new Date().toISOString();
+ addTimeline(`Completata azione: ${actionLabel(type,item)}`);
+ save();
+}
+function buildOperationalQueue(today){
+ const q=[];
+ db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate).forEach(x=>q.push({type:'tasks',id:x.id,date:x.dueDate,label:actionLabel('tasks',x),kind:'Task',priority:x.priority||''}));
+ db.recruiters.filter(x=>x.nextDate).forEach(x=>q.push({type:'recruiters',id:x.id,date:x.nextDate,label:actionLabel('recruiters',x),kind:'Recruiter'}));
+ db.people.filter(x=>x.nextDate).forEach(x=>q.push({type:'people',id:x.id,date:x.nextDate,label:actionLabel('people',x),kind:'Persona'}));
+ db.sites.filter(x=>x.nextDate).forEach(x=>q.push({type:'sites',id:x.id,date:x.nextDate,label:actionLabel('sites',x),kind:'Cantiere'}));
+ db.applications.filter(x=>x.nextDate&&!['Rifiutata','Sospesa'].includes(x.status)).forEach(x=>q.push({type:'applications',id:x.id,date:x.nextDate,label:actionLabel('applications',x),kind:'Candidatura'}));
+ return q.sort((a,b)=>{
+   const ar=a.date<today?0:a.date===today?1:2;
+   const br=b.date<today?0:b.date===today?1:2;
+   if(ar!==br)return ar-br;
+   const ap=a.priority==='Urgente'?0:a.priority==='Alta'?1:2;
+   const bp=b.priority==='Urgente'?0:b.priority==='Alta'?1:2;
+   if(ap!==bp)return ap-bp;
+   return a.date.localeCompare(b.date);
+ });
+}
+function renderOperationalQueue(today){
+ const due=buildOperationalQueue(today).slice(0,12);
+ if(!due.length){
+   nextActions.innerHTML='<div class="empty-focus"><b>Nessuna urgenza.</b><br>Inserisci una prossima azione o un follow-up: TCMS NEXUS lo porterà automaticamente qui.</div>';
+   return;
+ }
+ nextActions.innerHTML=due.map(x=>{
+   const overdue=x.date<today, isToday=x.date===today;
+   const cls=overdue?'critical':isToday?'today-action':'';
+   const when=overdue?'SCADUTO':isToday?'OGGI':x.date;
+   return `<div class="card command ${cls}">
+     <div class="command-head">
+       <div><div class="command-title">${escapeHtml(x.label)}</div><div class="command-meta">${when} · ${escapeHtml(x.kind)}</div></div>
+       <span class="pill">${overdue?'Priorità massima':isToday?'Da fare adesso':'Pianificato'}</span>
+     </div>
+     <div class="command-actions">
+       <button class="btn smallbtn" onclick="openAction('${x.type}','${x.id}')">Apri</button>
+       <button class="btn good smallbtn" onclick="completeAction('${x.type}','${x.id}')">Fatto</button>
+     </div>
+   </div>`;
+ }).join('');
+}
+
+function renderAll(){
+ recruitersTable.innerHTML=table('recruiters',[['name','Nome'],['company','Azienda'],['status','Stato'],['nextDate','Prossima data'],['nextAction','Azione']]);
+ companiesTable.innerHTML=table('companies',[['name','Azienda'],['sector','Settore'],['country','Paese'],['status','Stato']]);
+ peopleTable.innerHTML=table('people',[['name','Nome'],['company','Azienda'],['role','Ruolo'],['status','Stato'],['nextDate','Prossima data']]);
+ sitesTable.innerHTML=table('sites',[['name','Cantiere'],['company','Azienda'],['location','Località'],['sector','Settore'],['status','Stato'],['nextDate','Prossima data']]);
+ applicationsTable.innerHTML=table('applications',[['company','Azienda'],['role','Posizione'],['location','Località'],['status','Stato'],['nextDate','Follow-up']]);
+ tasksTable.innerHTML=table('tasks',[['title','Attività'],['category','Categoria'],['priority','Priorità'],['dueDate','Scadenza'],['status','Stato']]);
+ documentsTable.innerHTML=table('documents',[['title','Documento'],['type','Tipo'],['expiry','Scadenza'],['location','Posizione']]);
+ const today=new Date().toISOString().slice(0,10);
+ const openTasks=db.tasks.filter(x=>x.status!=='Completato').length;
+ const overdueTasks=db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate&&x.dueDate<today).length;
+ const dueToday=[...db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate===today),...db.recruiters.filter(x=>x.nextDate===today),...db.people.filter(x=>x.nextDate===today),...db.sites.filter(x=>x.nextDate===today),...db.applications.filter(x=>x.nextDate===today)].length;
+ const activeApps=db.applications.filter(x=>!['Rifiutata','Sospesa'].includes(x.status)).length;
+ const availableVerified=db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì').length;
+ kpis.innerHTML=[
+  ['Da fare oggi',dueToday,dueToday?'today':''],['Scaduti',overdueTasks,overdueTasks?'urgent':''],['Professionisti pronti',availableVerified,''],['Candidature attive',activeApps,''],['Recruiter',db.recruiters.length,''],['Aziende',db.companies.length,''],['Task aperti',openTasks,'']
+ ].map(([l,n,c])=>`<div class="card ${c}"><div class="kpi">${n}</div><div class="label">${l}</div></div>`).join('');
+ renderOperationalQueue(today);
+ const counts={};db.applications.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
+ applicationSummary.innerHTML=Object.keys(counts).length?Object.entries(counts).map(([s,n])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span>${s}</span><b>${n}</b></div>`).join(''):'<div class="empty">Nessuna candidatura.</div>';
+ timeline.innerHTML=db.timeline.length?db.timeline.slice(0,12).map(x=>`<div class="timeline-item">${escapeHtml(x.text)}<div class="label">${new Date(x.date).toLocaleString('it-IT')}</div></div>`).join(''):'<div class="empty">Nessuna attività registrata.</div>';
+}
+globalSearch.addEventListener('input',e=>{
+ const q=e.target.value.trim().toLowerCase(); if(!q){renderAll();return}
+ ['recruiters','companies','people','sites','applications','tasks','documents'].forEach(type=>{
+  const filtered=db[type].filter(x=>Object.values(x).join(' ').toLowerCase().includes(q));
+  const id=type+'Table'; if(document.getElementById(id))document.getElementById(id).innerHTML=filtered.length?
+   tableFromRows(type,filtered):'<div class="empty">Nessun risultato.</div>'
+ })
+});
+function tableFromRows(type,rows){
+ const map={
+ recruiters:[['name','Nome'],['company','Azienda'],['status','Stato'],['nextDate','Prossima data'],['nextAction','Azione']],
+ companies:[['name','Azienda'],['sector','Settore'],['country','Paese'],['status','Stato']],
+ people:[['name','Nome'],['company','Azienda'],['role','Ruolo'],['status','Stato'],['nextDate','Prossima data']],
+ sites:[['name','Cantiere'],['company','Azienda'],['location','Località'],['sector','Settore'],['status','Stato'],['nextDate','Prossima data']],
+ applications:[['company','Azienda'],['role','Posizione'],['location','Località'],['status','Stato'],['nextDate','Follow-up']],
+ tasks:[['title','Attività'],['category','Categoria'],['priority','Priorità'],['dueDate','Scadenza'],['status','Stato']],
+ documents:[['title','Documento'],['type','Tipo'],['expiry','Scadenza'],['location','Posizione']]
+ };const cols=map[type];
+ return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Azioni</th></tr></thead><tbody>`+
+ rows.map(r=>`<tr>${cols.map(([k])=>`<td>${formatCell(k,r[k])}</td>`).join('')}<td><button class="btn secondary" onclick="openForm('${type}','${r.id}')">Modifica</button></td></tr>`).join('')+'</tbody></table>'
+}
+function askSofia(){
+ const p=aiPrompt.value.toLowerCase();
+ const today=new Date().toISOString().slice(0,10);
+ const overdue=db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate&&x.dueDate<today);
+ const waiting=db.recruiters.filter(x=>['Invito inviato','Stand-by'].includes(x.status));
+ const follow=db.applications.filter(x=>x.nextDate&&x.nextDate<=today&&!['Rifiutata','Sospesa'].includes(x.status));
+ let out=`RIEPILOGO OPERATIVO TCMS NEXUS\n\n`;
+ out+=`• Recruiter registrati: ${db.recruiters.length}\n• Aziende: ${db.companies.length}\n• Persone/contatti: ${db.people.length}\n• Cantieri: ${db.sites.length}\n• Candidature: ${db.applications.length}\n• Task aperti: ${db.tasks.filter(x=>x.status!=='Completato').length}\n`;
+ out+=`• Task scaduti: ${overdue.length}\n• Recruiter in attesa/stand-by: ${waiting.length}\n• Follow-up candidature da fare: ${follow.length}\n\n`;
+ if(overdue.length) out+=`PRIORITÀ IMMEDIATE\n${overdue.slice(0,5).map(x=>'— '+x.title+' (scaduto '+x.dueDate+')').join('\n')}\n\n`;
+ if(follow.length) out+=`FOLLOW-UP CANDIDATURE\n${follow.slice(0,5).map(x=>'— '+x.company+': '+(x.nextAction||'ricontattare')).join('\n')}\n\n`;
+ if(waiting.length) out+=`RECRUITER DA RIPRENDERE\n${waiting.slice(0,5).map(x=>'— '+x.name+' · '+x.company+' · '+x.status).join('\n')}\n\n`;
+ const ready=db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì');
+ if(ready.length) out+=`PROFESSIONISTI VERIFICATI DISPONIBILI SUBITO\n${ready.slice(0,8).map(x=>'— '+x.name+' · '+(x.role||x.skills||'profilo')+' · '+(x.phone||x.email||'contatto da completare')).join('\n')}\n\n`;
+ out+=`PRIORITÀ: agire prima sugli scaduti, poi sulle azioni di oggi. Il tempo è il cardine.`;
+ aiOutput.textContent=out;
+}
+function exportData(){
+ const blob=new Blob([JSON.stringify({...db,_tcmsVersion:APP_VERSION,_exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TCMS_NEXUS_BACKUP_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)
+}
+function importData(e){
+ const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{db=JSON.parse(r.result);save();alert('Backup importato correttamente.')}catch{alert('File non valido.')}};r.readAsText(f)
+}
+
+function exportCSV(){
+ const rows=[['Categoria','Nome/Titolo','Azienda','Stato','Data prossima azione','Prossima azione']];
+ const add=(cat,arr)=>arr.forEach(x=>rows.push([cat,x.name||x.title||x.company||'',x.company||'',x.status||'',x.nextDate||x.dueDate||'',x.nextAction||x.notes||'']));
+ add('Recruiter',db.recruiters);add('Azienda',db.companies);add('Persona',db.people);add('Cantiere',db.sites);add('Candidatura',db.applications);add('Task',db.tasks);add('Documento',db.documents);
+ const csv=rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(';')).join('\n');
+ const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TCMS_NEXUS_RIEPILOGO_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href)
+}
+
+function resetData(){if(confirm('Azzera definitivamente tutti i dati locali?')){localStorage.removeItem('tcms_nexus_db');localStorage.removeItem('tcms_nexus_last_save');location.reload()}}
+buildNav();renderAll();
+</script>
+
+<button class="fab" onclick="toggleFabMenu()" aria-label="Inserimento rapido">+</button>
+<div id="fabMenu" class="fab-menu">
+  <button class="btn secondary" onclick="quickOpen('recruiters')">+ Recruiter</button>
+  <button class="btn secondary" onclick="quickOpen('companies')">+ Azienda</button>
+  <button class="btn secondary" onclick="quickOpen('people')">+ Persona</button>
+  <button class="btn secondary" onclick="quickOpen('applications')">+ Candidatura</button>
+  <button class="btn secondary" onclick="quickOpen('tasks')">+ Follow-up / Task</button>
+</div>
+<script>
+const supabaseUrl = window.env?.SUPABASE_URL || "https://leqdagalrhw...[lascia il tuo url reale qui]";
+const supabaseKey = window.env?.SUPABASE_ANON_KEY || "sb_publishable_5Pc...[lascia la tua chiave reale qui]";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function salvaCandidatura(nome, ruolo) {
+
+  const { data, error } = await supabaseClient
+    .from('applications')
+    .insert([
+      {
+        company: nome,
+        position: ruolo,
+        status: "Da inviare"
+      }
+    ]);
+
+  if (error) {
+    alert("Errore: " + error.message);
+  } else {
+    alert("Salvato nel database!");
+    setTimeout(() => renderAll(), 0);
+  }
+}
+
+</script>
+
+</body>
+</html>
