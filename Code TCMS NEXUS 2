@@ -513,8 +513,8 @@ buildNav();renderAll();
   <button class="btn secondary" onclick="quickOpen('tasks')">+ Follow-up / Task</button>
 </div>
 <script>
-const supabaseUrl = window.env?.SUPABASE_URL || "https://leqdagalrhw...[lascia il tuo url reale qui]";
-const supabaseKey = window.env?.SUPABASE_ANON_KEY || "sb_publishable_5Pc...[lascia la tua chiave reale qui]";
+const supabaseUrl = window.env?.SUPABASE_URL || "https://leqdagalrhwwuuqitjsc.supabase.co";
+const supabaseKey = window.env?.SUPABASE_ANON_KEY || "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 async function salvaCandidatura(nome, ruolo) {
