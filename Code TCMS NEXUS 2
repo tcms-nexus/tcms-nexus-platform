@@ -226,10 +226,25 @@ const schema = {
   ['title','Documento','text'],['type','Tipo','text'],['expiry','Scadenza','date'],['location','Posizione/Link','text'],['notes','Note','textarea']
  ]
 };
-let db = JSON.parse(localStorage.getItem('tcms_nexus_db') || 'null') || {
- recruiters:[],companies:[],people:[],sites:[],applications:[],tasks:[],documents:[],timeline:[]
-};
+let db = { recruiters:[],companies:[],people:[],sites:[],applications:[],tasks:[],documents:[],timeline:[] };
 let currentType=null, editId=null, saving=false;
+
+async function caricaDatiDaSupabase() {
+  const tabelle = ['recruiters', 'companies', 'people', 'sites', 'applications', 'tasks', 'documents', 'timeline'];
+  for (const tabella of tabelle) {
+    try {
+      const { data, error } = await supabaseClient.from(tabella).select('*');
+      if (!error && data) db[tabella] = data;
+    } catch (err) {
+      console.error(`Errore caricamento ${tabella}:`, err);
+    }
+  }
+  renderAll();
+}
+}
+
+}
+
 
 
 async function save(){
@@ -501,7 +516,8 @@ function exportCSV(){
 }
 
 function resetData(){if(confirm('Azzera definitivamente tutti i dati locali?')){localStorage.removeItem('tcms_nexus_db');localStorage.removeItem('tcms_nexus_last_save');location.reload()}}
-buildNav();renderAll();
+buildNav();caricaDatiDaSupabase();
+
 </script>
 
 <button class="fab" onclick="toggleFabMenu()" aria-label="Inserimento rapido">+</button>
