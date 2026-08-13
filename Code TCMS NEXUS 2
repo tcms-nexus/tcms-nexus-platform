@@ -300,39 +300,58 @@ function openForm(type,id=null){
  formDialog.showModal();
 }
 entityForm.onsubmit = async (e) => {
-if (saving) return;
- e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());
- if(editId){Object.assign(db[currentType].find(x=>x.id===editId),data,{updatedAt:new Date().toISOString()});addTimeline(`Aggiornato: ${data.name||data.title||data.company||'elemento'}`)}
- else{
-  const norm = v => String(v || '').trim().toLowerCase();
-
-const duplicate = currentType === 'applications' &&
-  db.applications.some(x =>
-    norm(x.company) === norm(data.company) &&
-    norm(x.position) === norm(data.position)
-  );
-
-// DISABILITATO CONTROLLO DUPLICATI
-   data.id=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));data.createdAt=new Date().toISOString();db[currentType].push(data);addTimeline(`Creato: ${data.name||data.title||data.company||'elemento'}`) 
   if (saving) return;
-saving = true;
-alert("DEBUG SUPABASE");
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  
+  saving = true;
 
-supabaseClient
-.from('applications')
-.insert([{
-  company: data.company,
-  position: data.position,
-  status: data.status
-}])
-.then(res => { 
-if (!res || res.error) return;
- 
-db[currentType].unshift(data);
+  if (editId) {
+    // 1. Logica di AGGIORNAMENTO sul Cloud Enterprise
+    try {
+      const { error } = await supabaseClient
+        .from(currentType)
+        .update(data)
+        .eq('id', editId);
+        
+      if (!error) {
+        Object.assign(db[currentType].find(x => x.id === editId), data, { updatedAt: new Date().toISOString() });
+        addTimeline(`Aggiornato in Cloud: ${data.name || data.title || data.company || 'elemento'}`);
+      } else {
+        console.error("Errore aggiornamento Supabase:", error.message);
+        alert("Errore durante il salvataggio nel Cloud.");
+      }
+    } catch (err) {
+      console.error("Connessione fallita in update:", err);
+    }
+  } else {
+    // 2. Logica di CREAZIONE sul Cloud Enterprise
+    data.id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+    data.createdAt = new Date().toISOString();
+    
+    try {
+      const { error } = await supabaseClient
+        .from(currentType)
+        .insert([data]);
+        
+      if (!error) {
+        db[currentType].unshift(data);
+        addTimeline(`Creato in Cloud: ${data.name || data.title || data.company || 'elemento'}`);
+      } else {
+        console.error("Errore inserimento Supabase:", error.message);
+        alert("Errore durante la creazione nel Cloud.");
+      }
+    } catch (err) {
+      console.error("Connessione fallita in insert:", err);
+    }
   }
+
+  // 3. Sincronizzazione dell'interfaccia e chiusura del modulo
+  save();
+  saving = false;
   formDialog.close();
-renderAll();
-})
+};
+
   
   
  
