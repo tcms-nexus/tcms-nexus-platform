@@ -1,29 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>TCMS NEXUS</title>
+    <title>TCMS NEXUS</title>
 </head>
-
 <body>
 
-<h1>TCMS NEXUS ATTIVO</h1>
+    <h1>TCMS NEXUS ATTIVO</h1>
 
-<script src="https://jsdelivr.net"></script>
+    <script src="https://cdn.jsdelivr.net"></script>
 
+    
+    <script>
+        // DATI DI CONNESSIONE
+        const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co"
+        const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t"
 
-<script>
+        // INIZIALIZZAZIONE CLIENT
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey)
 
-// 🔴 DATI
-const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co"
-const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t"
-
-// 🔴 CLIENT
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey)
-
-// ✅ TEST VISIVO
-document.body.innerHTML += "<p>✅ TCMS CONNESSO OK</p>"
-
-</script>
+        // TEST VISIVO A SCHERMO
+        document.body.innerHTML += "<p>✅ TCMS CONNESSO OK</p>"
+    </script>
 
 </body>
 </html>
