@@ -191,21 +191,21 @@ const schema = {
   ['name','Nome','text'],['company','Azienda','text'],['role','Ruolo','text'],['specialization','Specializzazione','text'],['country','Paese','text'],['language','Lingua','text'],
   ['linkedin','LinkedIn','url'],['email','Email','email'],['phone','Telefono/WhatsApp','text'],
   ['status','Stato','select',['Da contattare','Invito inviato','Collegato','In conversazione','Stand-by','Chiuso']],
-  ['lastContact','Ultimo contatto','date'],['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+  ['last_contact','Ultimo contatto','date'],['next_action','Prossima azione','text'],['next_date','Data prossima azione','date'],['notes','Note','textarea']
  ],
  companies:[
   ['name','Azienda','text'],['sector','Settore','text'],['country','Paese','text'],['website','Sito','url'],['manager','Manager/decision maker','text'],['email','Email','email'],['phone','Telefono','text'],
-  ['contact','Contatto principale','text'],['status','Stato','select',['Da studiare','Target','Contattata','In trattativa','Partner','Archiviata']],
+  ['contact','Contatto principale','text'],['status','Stato','select',['Da studiarie','Target','Contattata','In trattativa','Partner','Archiviata']],
   ['notes','Note','textarea']
  ],
  applications:[
   ['company','Azienda','text'],['role','Posizione','text'],['location','Località','text'],['source','Fonte/Link','text'],
   ['date','Data candidatura','date'],['status','Stato','select',['Da inviare','Inviata','Visualizzata','Colloquio','Offerta','Rifiutata','Sospesa']],
-  ['salary','Retribuzione/condizioni','text'],['nextAction','Prossima azione','text'],['nextDate','Data follow-up','date'],['notes','Note','textarea']
+  ['salary','Retribuzione/condizioni','text'],['next_action','Prossima azione','text'],['next_date','Data follow-up','date'],['notes','Note','textarea']
  ],
  tasks:[
   ['title','Attività','text'],['category','Categoria','select',['Recruiting','Candidatura','Documento','Tecnico','Amministrativo','Altro']],
-  ['priority','Priorità','select',['Alta','Media','Bassa']],['dueDate','Scadenza','date'],
+  ['priority','Priorità','select',['Alta','Media','Bassa']],['due_date','Scadenza','date'],
   ['status','Stato','select',['Da fare','In corso','Completato','In attesa']],['notes','Note','textarea']
  ],
  people:[
@@ -213,19 +213,20 @@ const schema = {
   ['email','Email','email'],['phone','Telefono/WhatsApp','text'],['linkedin','LinkedIn','url'],
   ['relationship','Relazione','select',['Da conoscere','Contatto','Ex collega','Referente','Decision maker','Altro']],
   ['status','Stato','select',['Attivo','Da ricontattare','Stand-by','Archiviato']],
-  ['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+  ['next_action','Prossima azione','text'],['next_date','Data prossima azione','date'],['notes','Note','textarea']
  ],
  sites:[
   ['name','Nome cantiere/progetto','text'],['company','Azienda principale','text'],['location','Località','text'],
   ['sector','Settore','select',['Tunnelling','Microtunnelling','Pipeline','Infrastrutture','Sollevamento','Altro']],
   ['status','Stato','select',['Da verificare','Attivo','In avvio','Sospeso','Concluso']],
   ['contact','Referente','text'],['opportunity','Opportunità/ruolo','text'],
-  ['nextAction','Prossima azione','text'],['nextDate','Data prossima azione','date'],['notes','Note','textarea']
+  ['next_action','Prossima azione','text'],['next_date','Data prossima azione','date'],['notes','Note','textarea']
  ],
  documents:[
   ['title','Documento','text'],['type','Tipo','text'],['expiry','Scadenza','date'],['location','Posizione/Link','text'],['notes','Note','textarea']
  ]
 };
+
 let db = { recruiters:[],companies:[],people:[],sites:[],applications:[],tasks:[],documents:[],timeline:[] };
 let currentType=null, editId=null, saving=false;
 
@@ -303,219 +304,89 @@ entityForm.onsubmit = async (e) => {
   if (saving) return;
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target).entries());
-  
   saving = true;
 
   if (editId) {
-    // 1. Logica di AGGIORNAMENTO sul Cloud Enterprise
     try {
       const { error } = await supabaseClient
         .from(currentType)
         .update(data)
         .eq('id', editId);
-        
+
       if (!error) {
-        Object.assign(db[currentType].find(x => x.id === editId), data, { updatedAt: new Date().toISOString() });
+        const item = db[currentType].find(x => x.id === editId);
+        if (item) Object.assign(item, data);
         addTimeline(`Aggiornato in Cloud: ${data.name || data.title || data.company || 'elemento'}`);
+        renderAll();
       } else {
         console.error("Errore aggiornamento Supabase:", error.message);
-        alert("Errore durante il salvataggio nel Cloud.");
+        alert("Errore durante il salvataggio nel Cloud: " + error.message);
       }
     } catch (err) {
       console.error("Connessione fallita in update:", err);
     }
   } else {
-    // 2. Logica di CREAZIONE sul Cloud Enterprise
-    data.id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
-    data.createdAt = new Date().toISOString();
-    
     try {
-      const { error } = await supabaseClient
+      const { data: insertedData, error } = await supabaseClient
         .from(currentType)
-        .insert([data]);
+        .insert([data])
+        .select();
         
-      if (!error) {
-        db[currentType].unshift(data);
-        addTimeline(`Creato in Cloud: ${data.name || data.title || data.company || 'elemento'}`);
+      if (!error && insertedData && insertedData[0]) {
+        db[currentType].unshift(insertedData[0]);
+        addTimeline(`Creato in Cloud: ${insertedData[0].name || insertedData[0].title || insertedData[0].company || 'elemento'}`);
+        renderAll();
       } else {
-        console.error("Errore inserimento Supabase:", error.message);
+        console.error("Errore inserimento Supabase:", error ? error.message : "Nessun dato restituito");
         alert("Errore durante la creazione nel Cloud.");
       }
     } catch (err) {
       console.error("Connessione fallita in insert:", err);
     }
   }
-
-  // 3. Sincronizzazione dell'interfaccia e chiusura del modulo
-  save();
   saving = false;
   formDialog.close();
 };
 
-  
-  
- 
+async function removeItem(type, id) {
+  if (!confirm('Eliminare definitivamente questo elemento dal Cloud?')) return;
+  try {
+    const { error } = await supabaseClient
+      .from(type)
+      .delete()
+      .eq('id', id);
 
-})
-.catch(err => {
-  alert("Errore di connessione: " + err.message);
-})
-.finally(() => {
-  saving = false;
-});
-
-
- // await supabaseClient
-   //.from('applications')
-   //.insert({
-    //  company: data.company,
-    //  position: data.position,
-  //    status: data.status
-  // });
- }
-formDialog.close(); 
-};
-function removeItem(type,id){
- if(!confirm('Eliminare questo elemento?'))return;
- const item=db[type].find(x=>x.id===id);db[type]=db[type].filter(x=>x.id!==id);
- addTimeline(`Eliminato: ${item?.name||item?.title||item?.company||'elemento'}`);save()
-}
-function table(type,cols){
- const rows=db[type];
- if(!rows.length)return `<div class="empty">Nessun dato presente.</div>`;
- return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Azioni</th></tr></thead><tbody>`+
- rows.map(r=>`<tr>${cols.map(([k])=>`<td>${formatCell(k,r[k])}</td>`).join('')}
- <td><button class="btn secondary" onclick="openForm('${type}','${r.id}')">Modifica</button> <button class="btn danger" onclick="removeItem('${type}','${r.id}')">X</button></td></tr>`).join('')+
- `</tbody></table>`
-}
-function formatCell(k,v){if(!v)return '—'; if(k==='status'||k==='priority')return `<span class="status">${escapeHtml(v)}</span>`; if(String(v).startsWith('http'))return `<a href="${v}" target="_blank" style="color:#82aaff">Apri</a>`; return escapeHtml(v)}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-
-function actionLabel(type,item){
- if(type==='tasks') return item.title||'Task';
- if(type==='recruiters') return (item.nextAction||'Ricontatta')+' — '+(item.name||'Recruiter');
- if(type==='people') return (item.nextAction||'Ricontatta')+' — '+(item.name||'Persona');
- if(type==='sites') return (item.nextAction||'Verifica')+' — '+(item.name||'Cantiere');
- if(type==='applications') return (item.nextAction||'Follow-up')+' — '+(item.company||'Candidatura');
- return 'Azione';
-}
-function openAction(type,id){
- showSection(type);
- setTimeout(()=>openForm(type,id),0);
-}
-function completeAction(type,id){
- const item=db[type].find(x=>x.id===id);
- if(!item)return;
- if(type==='tasks') item.status='Completato';
- else{
-   item.nextDate='';
-   item.nextAction='';
-   if(item.status==='Da ricontattare') item.status='Attivo';
- }
- item.updatedAt=new Date().toISOString();
- addTimeline(`Completata azione: ${actionLabel(type,item)}`);
- save();
-}
-function buildOperationalQueue(today){
- const q=[];
- db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate).forEach(x=>q.push({type:'tasks',id:x.id,date:x.dueDate,label:actionLabel('tasks',x),kind:'Task',priority:x.priority||''}));
- db.recruiters.filter(x=>x.nextDate).forEach(x=>q.push({type:'recruiters',id:x.id,date:x.nextDate,label:actionLabel('recruiters',x),kind:'Recruiter'}));
- db.people.filter(x=>x.nextDate).forEach(x=>q.push({type:'people',id:x.id,date:x.nextDate,label:actionLabel('people',x),kind:'Persona'}));
- db.sites.filter(x=>x.nextDate).forEach(x=>q.push({type:'sites',id:x.id,date:x.nextDate,label:actionLabel('sites',x),kind:'Cantiere'}));
- db.applications.filter(x=>x.nextDate&&!['Rifiutata','Sospesa'].includes(x.status)).forEach(x=>q.push({type:'applications',id:x.id,date:x.nextDate,label:actionLabel('applications',x),kind:'Candidatura'}));
- return q.sort((a,b)=>{
-   const ar=a.date<today?0:a.date===today?1:2;
-   const br=b.date<today?0:b.date===today?1:2;
-   if(ar!==br)return ar-br;
-   const ap=a.priority==='Urgente'?0:a.priority==='Alta'?1:2;
-   const bp=b.priority==='Urgente'?0:b.priority==='Alta'?1:2;
-   if(ap!==bp)return ap-bp;
-   return a.date.localeCompare(b.date);
- });
-}
-function renderOperationalQueue(today){
- const due=buildOperationalQueue(today).slice(0,12);
- if(!due.length){
-   nextActions.innerHTML='<div class="empty-focus"><b>Nessuna urgenza.</b><br>Inserisci una prossima azione o un follow-up: TCMS NEXUS lo porterà automaticamente qui.</div>';
-   return;
- }
- nextActions.innerHTML=due.map(x=>{
-   const overdue=x.date<today, isToday=x.date===today;
-   const cls=overdue?'critical':isToday?'today-action':'';
-   const when=overdue?'SCADUTO':isToday?'OGGI':x.date;
-   return `<div class="card command ${cls}">
-     <div class="command-head">
-       <div><div class="command-title">${escapeHtml(x.label)}</div><div class="command-meta">${when} · ${escapeHtml(x.kind)}</div></div>
-       <span class="pill">${overdue?'Priorità massima':isToday?'Da fare adesso':'Pianificato'}</span>
-     </div>
-     <div class="command-actions">
-       <button class="btn smallbtn" onclick="openAction('${x.type}','${x.id}')">Apri</button>
-       <button class="btn good smallbtn" onclick="completeAction('${x.type}','${x.id}')">Fatto</button>
-     </div>
-   </div>`;
- }).join('');
-}
-
-function renderAll(){
- recruitersTable.innerHTML=table('recruiters',[['name','Nome'],['company','Azienda'],['status','Stato'],['nextDate','Prossima data'],['nextAction','Azione']]);
- companiesTable.innerHTML=table('companies',[['name','Azienda'],['sector','Settore'],['country','Paese'],['status','Stato']]);
- peopleTable.innerHTML=table('people',[['name','Nome'],['company','Azienda'],['role','Ruolo'],['status','Stato'],['nextDate','Prossima data']]);
- sitesTable.innerHTML=table('sites',[['name','Cantiere'],['company','Azienda'],['location','Località'],['sector','Settore'],['status','Stato'],['nextDate','Prossima data']]);
- applicationsTable.innerHTML=table('applications',[['company','Azienda'],['role','Posizione'],['location','Località'],['status','Stato'],['nextDate','Follow-up']]);
- tasksTable.innerHTML=table('tasks',[['title','Attività'],['category','Categoria'],['priority','Priorità'],['dueDate','Scadenza'],['status','Stato']]);
- documentsTable.innerHTML=table('documents',[['title','Documento'],['type','Tipo'],['expiry','Scadenza'],['location','Posizione']]);
- const today=new Date().toISOString().slice(0,10);
- const openTasks=db.tasks.filter(x=>x.status!=='Completato').length;
- const overdueTasks=db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate&&x.dueDate<today).length;
- const dueToday=[...db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate===today),...db.recruiters.filter(x=>x.nextDate===today),...db.people.filter(x=>x.nextDate===today),...db.sites.filter(x=>x.nextDate===today),...db.applications.filter(x=>x.nextDate===today)].length;
- const activeApps=db.applications.filter(x=>!['Rifiutata','Sospesa'].includes(x.status)).length;
- const availableVerified=db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì').length;
- kpis.innerHTML=[
-  ['Da fare oggi',dueToday,dueToday?'today':''],['Scaduti',overdueTasks,overdueTasks?'urgent':''],['Professionisti pronti',availableVerified,''],['Candidature attive',activeApps,''],['Recruiter',db.recruiters.length,''],['Aziende',db.companies.length,''],['Task aperti',openTasks,'']
- ].map(([l,n,c])=>`<div class="card ${c}"><div class="kpi">${n}</div><div class="label">${l}</div></div>`).join('');
- renderOperationalQueue(today);
- const counts={};db.applications.forEach(x=>counts[x.status]=(counts[x.status]||0)+1);
- applicationSummary.innerHTML=Object.keys(counts).length?Object.entries(counts).map(([s,n])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span>${s}</span><b>${n}</b></div>`).join(''):'<div class="empty">Nessuna candidatura.</div>';
- timeline.innerHTML=db.timeline.length?db.timeline.slice(0,12).map(x=>`<div class="timeline-item">${escapeHtml(x.text)}<div class="label">${new Date(x.date).toLocaleString('it-IT')}</div></div>`).join(''):'<div class="empty">Nessuna attività registrata.</div>';
-}
-globalSearch.addEventListener('input',e=>{
- const q=e.target.value.trim().toLowerCase(); if(!q){renderAll();return}
- ['recruiters','companies','people','sites','applications','tasks','documents'].forEach(type=>{
-  const filtered=db[type].filter(x=>Object.values(x).join(' ').toLowerCase().includes(q));
-  const id=type+'Table'; if(document.getElementById(id))document.getElementById(id).innerHTML=filtered.length?
-   tableFromRows(type,filtered):'<div class="empty">Nessun risultato.</div>'
- })
-});
-function tableFromRows(type,rows){
- const map={
- recruiters:[['name','Nome'],['company','Azienda'],['status','Stato'],['nextDate','Prossima data'],['nextAction','Azione']],
- companies:[['name','Azienda'],['sector','Settore'],['country','Paese'],['status','Stato']],
- people:[['name','Nome'],['company','Azienda'],['role','Ruolo'],['status','Stato'],['nextDate','Prossima data']],
- sites:[['name','Cantiere'],['company','Azienda'],['location','Località'],['sector','Settore'],['status','Stato'],['nextDate','Prossima data']],
- applications:[['company','Azienda'],['role','Posizione'],['location','Località'],['status','Stato'],['nextDate','Follow-up']],
- tasks:[['title','Attività'],['category','Categoria'],['priority','Priorità'],['dueDate','Scadenza'],['status','Stato']],
- documents:[['title','Documento'],['type','Tipo'],['expiry','Scadenza'],['location','Posizione']]
- };const cols=map[type];
- return `<table><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Azioni</th></tr></thead><tbody>`+
- rows.map(r=>`<tr>${cols.map(([k])=>`<td>${formatCell(k,r[k])}</td>`).join('')}<td><button class="btn secondary" onclick="openForm('${type}','${r.id}')">Modifica</button></td></tr>`).join('')+'</tbody></table>'
+    if (!error) {
+      const item = db[type].find(x => x.id === id);
+      db[type] = db[type].filter(x => x.id !== id);
+      addTimeline(`Eliminato dal Cloud: ${item?.name || item?.title || item?.company || 'elemento'}`);
+      renderAll();
+    } else {
+      console.error("Errore eliminazione Supabase:", error.message);
+      alert("Impossibile eliminare l'elemento dal Cloud: " + error.message);
+    }
+  } catch (err) {
+    console.error("Connessione fallita in delete:", err);
+  }
 }
 function askSofia(){
  const p=aiPrompt.value.toLowerCase();
  const today=new Date().toISOString().slice(0,10);
- const overdue=db.tasks.filter(x=>x.status!=='Completato'&&x.dueDate&&x.dueDate<today);
+ const overdue=db.tasks.filter(x=>x.status!=='Completato'&&x.due_date&&x.due_date<today);
  const waiting=db.recruiters.filter(x=>['Invito inviato','Stand-by'].includes(x.status));
- const follow=db.applications.filter(x=>x.nextDate&&x.nextDate<=today&&!['Rifiutata','Sospesa'].includes(x.status));
+ const follow=db.applications.filter(x=>x.next_date&&x.next_date<=today&&!['Rifiutata','Sospesa'].includes(x.status));
  let out=`RIEPILOGO OPERATIVO TCMS NEXUS\n\n`;
  out+=`• Recruiter registrati: ${db.recruiters.length}\n• Aziende: ${db.companies.length}\n• Persone/contatti: ${db.people.length}\n• Cantieri: ${db.sites.length}\n• Candidature: ${db.applications.length}\n• Task aperti: ${db.tasks.filter(x=>x.status!=='Completato').length}\n`;
  out+=`• Task scaduti: ${overdue.length}\n• Recruiter in attesa/stand-by: ${waiting.length}\n• Follow-up candidature da fare: ${follow.length}\n\n`;
- if(overdue.length) out+=`PRIORITÀ IMMEDIATE\n${overdue.slice(0,5).map(x=>'— '+x.title+' (scaduto '+x.dueDate+')').join('\n')}\n\n`;
- if(follow.length) out+=`FOLLOW-UP CANDIDATURE\n${follow.slice(0,5).map(x=>'— '+x.company+': '+(x.nextAction||'ricontattare')).join('\n')}\n\n`;
+ if(overdue.length) out+=`PRIORITÀ IMMEDIATE\n${overdue.slice(0,5).map(x=>'— '+x.title+' (scaduto '+x.due_date+')').join('\n')}\n\n`;
+ if(follow.length) out+=`FOLLOW-UP CANDIDATURE\n${follow.slice(0,5).map(x=>'— '+x.company+': '+(x.next_action||'ricontattare')).join('\n')}\n\n`;
  if(waiting.length) out+=`RECRUITER DA RIPRENDERE\n${waiting.slice(0,5).map(x=>'— '+x.name+' · '+x.company+' · '+x.status).join('\n')}\n\n`;
  const ready=db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì');
  if(ready.length) out+=`PROFESSIONISTI VERIFICATI DISPONIBILI SUBITO\n${ready.slice(0,8).map(x=>'— '+x.name+' · '+(x.role||x.skills||'profilo')+' · '+(x.phone||x.email||'contatto da completare')).join('\n')}\n\n`;
  out+=`PRIORITÀ: agire prima sugli scaduti, poi sulle azioni di oggi. Il tempo è il cardine.`;
  aiOutput.textContent=out;
 }
+
 function exportData(){
  const blob=new Blob([JSON.stringify({...db,_tcmsVersion:APP_VERSION,_exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TCMS_NEXUS_BACKUP_'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href)
