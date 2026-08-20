@@ -32,9 +32,9 @@
     <div id="kpis" class="grid"></div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Caricamento in corso...</div>
+        <div id="recruitersTable">Connessione in corso al database cloud...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Caricamento in corso...</div>
+        <div id="companiesTable">Connessione in corso al database cloud...</div>
     </div>
 </div>
 
@@ -50,11 +50,11 @@
 </dialog>
 
 <script>
-    const supabaseUrl = "https://supabase.co";
+    // URL Corretto e Allineato (Risolto l'errore ERR_NAME_NOT_RESOLVED)
+    const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     let supabaseClient;
 
-    // Struttura fissa allineata ai campi del database
     const fieldsConfig = {
         recruiters: [
             { id: 'name', label: 'Nome', type: 'text' },
@@ -73,9 +73,9 @@
     async function init() {
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("Supabase connesso!");
+            console.log("✅ Supabase collegato correttamente all'URL ufficiale!");
         } else {
-            console.error("Libreria Cloud mancante.");
+            console.error("❌ Libreria Cloud non disponibile.");
             return;
         }
 
@@ -88,7 +88,7 @@
 
             render();
         } catch (err) {
-            console.error("Errore sincro:", err);
+            console.error("Errore sincronizzazione tabelle:", err);
         }
     }
 
@@ -128,7 +128,7 @@
     function render() {
         let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
         if (db.recruiters.length === 0) {
-            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato</td></tr>';
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato nel database cloud</td></tr>';
         } else {
             db.recruiters.forEach(r => {
                 htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
@@ -139,7 +139,7 @@
 
         let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata nel database cloud</td></tr>';
         } else {
             db.companies.forEach(c => {
                 htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
@@ -169,7 +169,7 @@
                     document.getElementById('formDialog').close();
                     await init();
                 } else {
-                    alert("Errore Supabase: " + error.message);
+                    alert("Errore Supabase durante il salvataggio: " + error.message);
                 }
             } catch (err) {
                 console.error(err);
