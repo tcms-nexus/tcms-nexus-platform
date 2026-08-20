@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- CDN alternativo robusto per caricare Supabase senza timeout -->
-    <script src="https://cloudflare.com" integrity="sha512-Y4AAsXvA9BwIs9A0zYp9e8aH+3SInTf77v8gE0XUuSskN6wHmbLw9NfFwzSgR0eG24yYn3kR5mCxlSdBWshvWw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- CDN alternativo unpkg raccomandato ufficialmente da Supabase per evitare i blocchi CORS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
@@ -33,9 +33,9 @@
     <div id="kpis" class="grid"></div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Nessun dato disponibile</div>
+        <div id="recruitersTable">Caricamento in corso...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Nessun dato disponibile</div>
+        <div id="companiesTable">Caricamento in corso...</div>
     </div>
 </div>
 
@@ -49,17 +49,11 @@
 </dialog>
 
 <script>
-    // Inizializzazione Client Supabase sicura
-    const supabaseUrl = "https://supabase.co";
+    const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     let supabaseClient;
 
-    if (typeof supabase !== 'undefined') {
-        supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-    } else {
-        console.error("Errore critico: la libreria Supabase non è stata caricata.");
-    }
-
+    // Configurazione campi
     const schema = {
         recruiters: [['name','Nome','text'],['company','Azienda','text'],['status','select',['Da contattare','Contattato']]],
         companies: [['name','Azienda','text'],['status','select',['Target','Partner']]]
@@ -69,7 +63,15 @@
     let currentActiveType = 'recruiters';
 
     async function init() {
-        if (!supabaseClient) return;
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+            console.log("Supabase caricato correttamente via unpkg!");
+        } else {
+            console.error("Errore critico: Impossibile caricare Supabase.");
+            document.getElementById('recruitersTable').innerText = "Errore connessione cloud library.";
+            return;
+        }
+
         try {
             for (let table of Object.keys(schema)) {
                 const { data, error } = await supabaseClient.from(table).select('*');
@@ -92,59 +94,41 @@
         fieldsContainer.innerHTML = '';
         
         schema[type].forEach(field => {
+            const fieldName = field[0];
+            const fieldLabel = field[1];
+            const fieldType = field[2];
+
             const label = document.createElement('label');
-            label.innerText = field[1];
+            label.innerText = fieldLabel;
+            label.style.display = "block";
+            label.style.marginTop = "10px";
             fieldsContainer.appendChild(label);
             
-            if (field[2] === 'text') {
+            if (fieldType === 'text') {
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.name = field[0];
+                input.name = fieldName;
                 input.required = true;
                 fieldsContainer.appendChild(input);
-            } else if (field[2] === 'select') {
+            } else if (fieldType === 'select') {
                 const select = document.createElement('select');
-                select.name = field[0];
+                select.name = fieldName;
                 field[3].forEach(opt => {
                     const option = document.createElement('option');
                     option.value = opt;
                     option.innerText = opt;
-                    fieldsContainer.appendChild(select);
                     select.appendChild(option);
                 });
+                fieldsContainer.appendChild(select);
             }
         });
         document.getElementById('formDialog').showModal();
     };
 
-    document.getElementById('entityForm').onsubmit = async (e) => {
-        e.preventDefault();
-        if (!supabaseClient) return;
-        
-        const formData = new FormData(e.target);
-        const record = {};
-        schema[currentActiveType].forEach(field => {
-            record[field[0]] = formData.get(field[0]);
-        });
-
-        try {
-            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-            if (!error) {
-                document.getElementById('formDialog').close();
-                await init();
-            } else {
-                alert("Errore durante il salvataggio: " + error.message);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
     function render() {
-        // Render della tabella Recruiters
         let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
         if (db.recruiters.length === 0) {
-            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato</td></tr>';
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato nel Cloud</td></tr>';
         } else {
             db.recruiters.forEach(r => {
                 htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
@@ -153,10 +137,9 @@
         htmlRecruiters += '</table>';
         document.getElementById('recruitersTable').innerHTML = htmlRecruiters;
 
-        // Render della tabella Aziende
         let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata nel Cloud</td></tr>';
         } else {
             db.companies.forEach(c => {
                 htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
@@ -166,7 +149,37 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    window.addEventListener('DOMContentLoaded', init);
+    // Eseguiamo il collegamento degli eventi SOLO quando il DOM è pronto per evitare errori di tipo "null"
+    window.addEventListener('DOMContentLoaded', () => {
+        init();
+
+        const form = document.getElementById('entityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                
+                const formData = new FormData(e.target);
+                const record = {};
+                schema[currentActiveType].forEach(field => {
+                    const fieldName = field[0];
+                    record[fieldName] = formData.get(fieldName);
+                });
+
+                try {
+                    const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                    if (!error) {
+                        document.getElementById('formDialog').close();
+                        await init();
+                    } else {
+                        alert("Errore durante il salvataggio su Supabase: " + error.message);
+                    }
+                } catch (err) {
+                    console.error("Errore nell'invio dei dati:", err);
+                }
+            };
+        }
+    });
 </script>
 </body>
 </html>
