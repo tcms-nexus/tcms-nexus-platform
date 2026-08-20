@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCMS NEXUS - Enterprise Control Panel</title>
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
+        body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
+        .kpi { font-size: 2rem; font-weight: bold; color: var(--accent); }
+        .label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; }
+        .urgent { border-color: var(--critical); }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--bg-card); border-radius: 8px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #18223f; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); }
+        .btn { background: #1e294b; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
+        .btn.good { background: var(--accent); color: #0a0f1d; font-weight: bold; }
+        .btn.danger { background: var(--critical); }
+        textarea, input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; }
+        dialog { background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 25px; width: 90%; max-width: 500px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>TCMS <span style="color:var(--accent)">NEXUS</span></h1>
+        <button class="btn good" onclick="openForm('recruiters')">+ Nuovo Recruiter</button>
+    </div>
+    <div id="kpis" class="grid"></div>
+    <div id="tables">
+        <h3>📋 Recruiter Registrati</h3><div id="recruitersTable"></div>
+        <h3>🏢 Aziende Target</h3><div id="companiesTable"></div>
+    </div>
+</div>
+<dialog id="formDialog">
+    <h3 id="formTitle">Gestione</h3>
+    <div id="formFields"></div><button type="submit" class="btn good">Salva</button></form>
+</dialog>
+<script>
+    // Connessione Supabase (Riferimento: 0.1.6, 1.1.9)
+    const supabaseClient = supabase.createClient("https://supabase.co", "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t");
+    const schema = {
+        recruiters: [['name','Nome','text'],['company','Azienda','text'],['status','select',['Da contattare','Contattato']]],
+        companies: [['name','Azienda','text'],['status','select',['Target','Partner']]]
+    };
+    let db = { recruiters:[], companies:[] };
+    async function init() {
+        for (let table of Object.keys(schema)) {
+            const { data } = await supabaseClient.from(table).select('*');
+            db[table] = data || [];
+        }
+        render();
+    }
+    // Funzioni CRUD e UI (Riferimento: 0.1.6)
+    window.openForm = (type) => { /* Logica Form */ document.getElementById('formDialog').showModal(); };
+    document.getElementById('entityForm').onsubmit = async (e) => { e.preventDefault(); /* Logic ... */ init(); };
+    function render() { /* Render table */ }
+    window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
