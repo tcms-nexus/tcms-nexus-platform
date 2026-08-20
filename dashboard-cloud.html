@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- CDN alternativo unpkg raccomandato ufficialmente da Supabase per evitare i blocchi CORS -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Caricamento tramite CDN stabile unpkg senza blocchi CORS -->
+    <script src="https://unpkg.com"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
@@ -13,14 +13,13 @@
         .header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
-        .kpi { font-size: 2rem; font-weight: bold; color: var(--accent); }
-        .label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--bg-card); border-radius: 8px; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #18223f; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); }
         .btn { background: #1e294b; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
         .btn.good { background: var(--accent); color: #0a0f1d; font-weight: bold; }
-        textarea, input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
+        textarea, input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; display: block; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
         dialog { background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 25px; width: 90%; max-width: 500px; border-radius: 8px; }
     </style>
 </head>
@@ -43,83 +42,84 @@
     <h3 id="formTitle">Gestione</h3>
     
         <div id="formFields"></div>
-        <button type="submit" class="btn good">Salva</button>
-        <button type="button" class="btn" onclick="document.getElementById('formDialog').close()" style="margin-left: 10px;">Annulla</button>
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn good">Salva</button>
+            <button type="button" class="btn" onclick="document.getElementById('formDialog').close()" style="margin-left: 10px;">Annulla</button>
+        </div>
     </form>
 </dialog>
 
 <script>
-    const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co";
+    const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     let supabaseClient;
 
-    // Configurazione campi
-    const schema = {
-        recruiters: [['name','Nome','text'],['company','Azienda','text'],['status','select',['Da contattare','Contattato']]],
-        companies: [['name','Azienda','text'],['status','select',['Target','Partner']]]
+    // Struttura fissa allineata ai campi del database
+    const fieldsConfig = {
+        recruiters: [
+            { id: 'name', label: 'Nome', type: 'text' },
+            { id: 'company', label: 'Azienda', type: 'text' },
+            { id: 'status', label: 'Stato', type: 'select', options: ['Da contattare', 'Contattato'] }
+        ],
+        companies: [
+            { id: 'name', label: 'Azienda', type: 'text' },
+            { id: 'status', label: 'Stato', type: 'select', options: ['Target', 'Partner'] }
+        ]
     };
     
-    let db = { recruiters:[], companies:[] };
+    let db = { recruiters: [], companies: [] };
     let currentActiveType = 'recruiters';
 
     async function init() {
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("Supabase caricato correttamente via unpkg!");
+            console.log("Supabase connesso!");
         } else {
-            console.error("Errore critico: Impossibile caricare Supabase.");
-            document.getElementById('recruitersTable').innerText = "Errore connessione cloud library.";
+            console.error("Libreria Cloud mancante.");
             return;
         }
 
         try {
-            for (let table of Object.keys(schema)) {
-                const { data, error } = await supabaseClient.from(table).select('*');
-                if (!error) {
-                    db[table] = data || [];
-                } else {
-                    console.error("Errore lettura tabella " + table + ":", error);
-                }
-            }
+            const resRecruiters = await supabaseClient.from('recruiters').select('*');
+            db.recruiters = resRecruiters.data || [];
+
+            const resCompanies = await supabaseClient.from('companies').select('*');
+            db.companies = resCompanies.data || [];
+
             render();
         } catch (err) {
-            console.error("Errore durante l'inizializzazione:", err);
+            console.error("Errore sincro:", err);
         }
     }
 
     window.openForm = (type) => {
         currentActiveType = type;
         document.getElementById('formTitle').innerText = type === 'recruiters' ? 'Nuovo Recruiter' : 'Nuova Azienda';
-        const fieldsContainer = document.getElementById('formFields');
-        fieldsContainer.innerHTML = '';
         
-        schema[type].forEach(field => {
-            const fieldName = field[0];
-            const fieldLabel = field[1];
-            const fieldType = field[2];
-
+        const container = document.getElementById('formFields');
+        container.innerHTML = '';
+        
+        fieldsConfig[type].forEach(f => {
             const label = document.createElement('label');
-            label.innerText = fieldLabel;
-            label.style.display = "block";
-            label.style.marginTop = "10px";
-            fieldsContainer.appendChild(label);
+            label.innerText = f.label;
+            container.appendChild(label);
             
-            if (fieldType === 'text') {
+            if (f.type === 'text') {
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.name = fieldName;
+                input.name = f.id;
                 input.required = true;
-                fieldsContainer.appendChild(input);
-            } else if (fieldType === 'select') {
+                container.appendChild(input);
+            } else if (f.type === 'select') {
                 const select = document.createElement('select');
-                select.name = fieldName;
-                field[3].forEach(opt => {
+                select.name = f.id;
+                f.options.forEach(opt => {
                     const option = document.createElement('option');
                     option.value = opt;
                     option.innerText = opt;
                     select.appendChild(option);
                 });
-                fieldsContainer.appendChild(select);
+                container.appendChild(select);
             }
         });
         document.getElementById('formDialog').showModal();
@@ -128,7 +128,7 @@
     function render() {
         let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
         if (db.recruiters.length === 0) {
-            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato nel Cloud</td></tr>';
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato</td></tr>';
         } else {
             db.recruiters.forEach(r => {
                 htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
@@ -139,7 +139,7 @@
 
         let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata nel Cloud</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata</td></tr>';
         } else {
             db.companies.forEach(c => {
                 htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
@@ -149,36 +149,33 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    // Eseguiamo il collegamento degli eventi SOLO quando il DOM è pronto per evitare errori di tipo "null"
     window.addEventListener('DOMContentLoaded', () => {
         init();
 
-        const form = document.getElementById('entityForm');
-        if (form) {
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                if (!supabaseClient) return;
-                
-                const formData = new FormData(e.target);
-                const record = {};
-                schema[currentActiveType].forEach(field => {
-                    const fieldName = field[0];
-                    record[fieldName] = formData.get(fieldName);
-                });
+        document.getElementById('entityForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!supabaseClient) return;
+            
+            const formData = new FormData(e.target);
+            const record = {};
+            
+            fieldsConfig[currentActiveType].forEach(f => {
+                record[f.id] = formData.get(f.id);
+            });
 
-                try {
-                    const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-                    if (!error) {
-                        document.getElementById('formDialog').close();
-                        await init();
-                    } else {
-                        alert("Errore durante il salvataggio su Supabase: " + error.message);
-                    }
-                } catch (err) {
-                    console.error("Errore nell'invio dei dati:", err);
+            try {
+                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                if (!error) {
+                    document.getElementById('formDialog').close();
+                    await init();
+                } else {
+                    alert("Errore Supabase: " + error.message);
                 }
-            };
-        }
+            } catch (err) {
+                console.error(err);
+            }
+        };
     });
 </script>
 </body>
+</html>
