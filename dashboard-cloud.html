@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <script src="https://jsdelivr.net"></script>
+    <!-- CDN alternativo robusto per caricare Supabase senza timeout -->
+    <script src="https://cloudflare.com" integrity="sha512-Y4AAsXvA9BwIs9A0zYp9e8aH+3SInTf77v8gE0XUuSskN6wHmbLw9NfFwzSgR0eG24yYn3kR5mCxlSdBWshvWw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
@@ -14,15 +15,13 @@
         .card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
         .kpi { font-size: 2rem; font-weight: bold; color: var(--accent); }
         .label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; }
-        .urgent { border-color: var(--critical); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--bg-card); border-radius: 8px; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #18223f; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); }
         .btn { background: #1e294b; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; }
         .btn.good { background: var(--accent); color: #0a0f1d; font-weight: bold; }
-        .btn.danger { background: var(--critical); }
-        textarea, input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; }
-        dialog { background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 25px; width: 90%; max-width: 500px; }
+        textarea, input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
+        dialog { background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 25px; width: 90%; max-width: 500px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -33,33 +32,140 @@
     </div>
     <div id="kpis" class="grid"></div>
     <div id="tables">
-        <h3>📋 Recruiter Registrati</h3><div id="recruitersTable"></div>
-        <h3>🏢 Aziende Target</h3><div id="companiesTable"></div>
+        <h3>📋 Recruiter Registrati</h3>
+        <div id="recruitersTable">Nessun dato disponibile</div>
+        <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
+        <div id="companiesTable">Nessun dato disponibile</div>
     </div>
 </div>
+
 <dialog id="formDialog">
     <h3 id="formTitle">Gestione</h3>
-    <div id="formFields"></div><button type="submit" class="btn good">Salva</button></form>
+    
+        <div id="formFields"></div>
+        <button type="submit" class="btn good">Salva</button>
+        <button type="button" class="btn" onclick="document.getElementById('formDialog').close()" style="margin-left: 10px;">Annulla</button>
+    </form>
 </dialog>
+
 <script>
-    // Connessione Supabase (Riferimento: 0.1.6, 1.1.9)
-    const supabaseClient = supabase.createClient("https://supabase.co", "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t");
+    // Inizializzazione Client Supabase sicura
+    const supabaseUrl = "https://supabase.co";
+    const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
+    let supabaseClient;
+
+    if (typeof supabase !== 'undefined') {
+        supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    } else {
+        console.error("Errore critico: la libreria Supabase non è stata caricata.");
+    }
+
     const schema = {
         recruiters: [['name','Nome','text'],['company','Azienda','text'],['status','select',['Da contattare','Contattato']]],
         companies: [['name','Azienda','text'],['status','select',['Target','Partner']]]
     };
+    
     let db = { recruiters:[], companies:[] };
+    let currentActiveType = 'recruiters';
+
     async function init() {
-        for (let table of Object.keys(schema)) {
-            const { data } = await supabaseClient.from(table).select('*');
-            db[table] = data || [];
+        if (!supabaseClient) return;
+        try {
+            for (let table of Object.keys(schema)) {
+                const { data, error } = await supabaseClient.from(table).select('*');
+                if (!error) {
+                    db[table] = data || [];
+                } else {
+                    console.error("Errore lettura tabella " + table + ":", error);
+                }
+            }
+            render();
+        } catch (err) {
+            console.error("Errore durante l'inizializzazione:", err);
         }
-        render();
     }
-    // Funzioni CRUD e UI (Riferimento: 0.1.6)
-    window.openForm = (type) => { /* Logica Form */ document.getElementById('formDialog').showModal(); };
-    document.getElementById('entityForm').onsubmit = async (e) => { e.preventDefault(); /* Logic ... */ init(); };
-    function render() { /* Render table */ }
+
+    window.openForm = (type) => {
+        currentActiveType = type;
+        document.getElementById('formTitle').innerText = type === 'recruiters' ? 'Nuovo Recruiter' : 'Nuova Azienda';
+        const fieldsContainer = document.getElementById('formFields');
+        fieldsContainer.innerHTML = '';
+        
+        schema[type].forEach(field => {
+            const label = document.createElement('label');
+            label.innerText = field[1];
+            fieldsContainer.appendChild(label);
+            
+            if (field[2] === 'text') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = field[0];
+                input.required = true;
+                fieldsContainer.appendChild(input);
+            } else if (field[2] === 'select') {
+                const select = document.createElement('select');
+                select.name = field[0];
+                field[3].forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.innerText = opt;
+                    fieldsContainer.appendChild(select);
+                    select.appendChild(option);
+                });
+            }
+        });
+        document.getElementById('formDialog').showModal();
+    };
+
+    document.getElementById('entityForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!supabaseClient) return;
+        
+        const formData = new FormData(e.target);
+        const record = {};
+        schema[currentActiveType].forEach(field => {
+            record[field[0]] = formData.get(field[0]);
+        });
+
+        try {
+            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+            if (!error) {
+                document.getElementById('formDialog').close();
+                await init();
+            } else {
+                alert("Errore durante il salvataggio: " + error.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    function render() {
+        // Render della tabella Recruiters
+        let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
+        if (db.recruiters.length === 0) {
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato</td></tr>';
+        } else {
+            db.recruiters.forEach(r => {
+                htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
+            });
+        }
+        htmlRecruiters += '</table>';
+        document.getElementById('recruitersTable').innerHTML = htmlRecruiters;
+
+        // Render della tabella Aziende
+        let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
+        if (db.companies.length === 0) {
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata</td></tr>';
+        } else {
+            db.companies.forEach(c => {
+                htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
+            });
+        }
+        htmlCompanies += '</table>';
+        document.getElementById('companiesTable').innerHTML = htmlCompanies;
+    }
+
     window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
