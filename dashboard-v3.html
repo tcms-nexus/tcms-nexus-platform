@@ -97,14 +97,12 @@
         </div>
     </form>
 </div>
-
-<script src="https://jsdelivr.net"></script>
+<script src="https://unpkg.com"></script>
 window.addEventListener('DOMContentLoaded', () => {
     const APP_VERSION = '3.3';
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
     const sections = [
         { cat: 'recruiters', label: 'Recruiters', title: 'Recruiter Registrati', btn: '+ Nuovo Recruiter', fb: 'Nessun recruiter trovato nel database cloud.' },
         { cat: 'companies', label: 'Aziende Target', title: 'Aziende Mappate', btn: '+ Nuova Azienda', fb: 'Nessuna azienda registrata.' },
