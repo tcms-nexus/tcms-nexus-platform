@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- Iniezione locale della libreria client: zero richieste esterne, zero blocchi CORS -->
-    <script>
-        !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).supabase={})}(this,(function(e){"use strict";class t{constructor(e,t){this.url=e,this.key=t}from(e){return{select:()=>({data:[{id:1,name:"Connessione Locale Protetta",company:"TCMS Nexus Core",status:"Attivo"}],error:null}),insert:(t)=>this._request("POST",e,t)}}async _request(e,t,r){const n=await fetch(`${this.url}/rest/v1/${t}`,{method:e,headers:{apikey:this.key,Authorization:`Bearer ${this.key}`,"Content-Type":"application/json",Prefer:"return=representation"},body:r?JSON.stringify(r):null});const o=await n.json();return{data:o,error:n.ok?null:{message:"Errore Cloud"}}}}e.createClient=(e,r)=>new t(e,r),Object.defineProperty(e,"__esModule",{value:!0})});
-    </script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
@@ -32,9 +28,9 @@
     </div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Connessione al database cloud...</div>
+        <div id="recruitersTable">Connessione al database...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Connessione al database cloud...</div>
+        <div id="companiesTable">Connessione al database...</div>
     </div>
 </div>
 
@@ -50,11 +46,15 @@
 </dialog>
 
 <script>
+    // Configurazione chiavi dirette
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     
-    console.log("✅ TCMS Cloud Core Online Localmente!");
+    const headers = {
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Content-Type": "application/json"
+    };
 
     const fieldsConfig = {
         recruiters: [
@@ -68,16 +68,28 @@
         ]
     };
     
-    let db = { recruiters: [], companies: [] };
     let currentActiveType = 'recruiters';
 
-    async function fetchCloudData() {
+    // Chiamata REST nativa per caricare i dati senza usare librerie esterne
+    async function loadData() {
         try {
-            const resRecruiters = await supabaseClient.from('recruiters').select('*');
-            db.recruiters = resRecruiters.data || [];
-            renderTables();
+            const response = await fetch(supabaseUrl + "/recruiters?select=*", { method: "GET", headers: headers });
+            const data = await response.json();
+            
+            let html = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
+            if (!data || data.length === 0) {
+                html += '<tr><td colspan="3">Nessun recruiter trovato nel database cloud</td></tr>';
+            } else {
+                data.forEach(r => {
+                    html += '<tr><td>' + (r.name || '') + '</td><td>' + (r.company || '') + '</td><td>' + (r.status || '') + '</td></tr>';
+                });
+            }
+            html += '</table>';
+            document.getElementById('recruitersTable').innerHTML = html;
+            document.getElementById('companiesTable').innerHTML = '<table><tr><th>Azienda</th><th>Stato</th></tr><tr><td colspan="2">Nessuna azienda registrata</td></tr></table>';
         } catch (err) {
-            console.error(err);
+            console.error("Errore di sincronizzazione:", err);
+            document.getElementById('recruitersTable').innerText = "Errore di connessione di rete.";
         }
     }
 
@@ -113,35 +125,37 @@
         document.getElementById('formDialog').showModal();
     };
 
-    function renderTables() {
-        let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
-        db.recruiters.forEach(r => {
-            htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
-        });
-        htmlRecruiters += '</table>';
-        document.getElementById('recruitersTable').innerHTML = htmlRecruiters;
-        document.getElementById('companiesTable').innerHTML = '<table><tr><th>Azienda</th><th>Stato</th></tr><tr><td colspan="2">Nessuna azienda registrata</td></tr></table>';
-    }
-
+    // Invio dati nativo tramite Fetch POST
     document.getElementById('entityForm').onsubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const record = {};
+        
         fieldsConfig[currentActiveType].forEach(f => {
             record[f.id] = formData.get(f.id);
         });
 
-        const { error } = await supabaseClient.from(currentActiveType).insert(record);
-        if (!error) {
-            document.getElementById('formDialog').close();
-            alert("✅ Record inviato al Cloud!");
-            window.location.reload();
-        } else {
-            alert("Errore");
+        try {
+            const response = await fetch(supabaseUrl + "/" + currentActiveType, {
+                method: "POST",
+                headers: { ...headers, "Prefer": "return=representation" },
+                body: JSON.stringify(record)
+            });
+            
+            if (response.ok) {
+                document.getElementById('formDialog').close();
+                loadData();
+            } else {
+                const errData = await response.json();
+                alert("Errore del database: " + (errData.message || response.statusText));
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    fetchCloudData();
+    // Boot automatico
+    loadData();
 </script>
 </body>
 </html>
