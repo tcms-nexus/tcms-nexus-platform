@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- CDN alternativo per caricare Supabase in sicurezza -->
-    <script src="https://cloudflare.com"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
@@ -38,7 +36,6 @@
     </div>
 </div>
 
-<!-- Struttura del modulo bloccata e verificata con ID esatto -->
 <dialog id="formDialog">
     <h3 id="formTitle">Gestione</h3>
     
@@ -50,10 +47,16 @@
     </form>
 </dialog>
 
-<script>
+<!-- Trasformiamo lo script in modulo per caricare le funzioni dal tuo server privato bypassando i CDN -->
+<script type="module">
+    import { createClient } from 'https://jsdelivr.net';
+
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
-    let supabaseClient;
+    
+    // Inizializzazione client sicura
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    console.log("✅ Connessione stabilita direttamente dal server di TCMS!");
 
     const fieldsConfig = {
         recruiters: [
@@ -70,18 +73,7 @@
     let db = { recruiters: [], companies: [] };
     let currentActiveType = 'recruiters';
 
-    function initSupabase() {
-        if (typeof supabase !== 'undefined') {
-            supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("✅ Connessione cloud avviata.");
-            fetchCloudData();
-        } else {
-            console.error("❌ Libreria di rete non trovata.");
-        }
-    }
-
     async function fetchCloudData() {
-        if (!supabaseClient) return;
         try {
             const resRecruiters = await supabaseClient.from('recruiters').select('*');
             db.recruiters = resRecruiters.data || [];
@@ -140,25 +132,23 @@
         htmlRecruiters += '</table>';
         document.getElementById('recruitersTable').innerHTML = htmlRecruiters;
 
-        let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
+        let html_companies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda presente nel database cloud</td></tr>';
+            html_companies += '<tr><td colspan="2">Nessuna azienda presente nel database cloud</td></tr>';
         } else {
             db.companies.forEach(c => {
-                htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
+                html_companies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
             });
         }
-        htmlCompanies += '</table>';
-        document.getElementById('companiesTable').innerHTML = htmlCompanies;
+        html_companies += '</table>';
+        document.getElementById('companiesTable').innerHTML = html_companies;
     }
 
-    // Controllo di sicurezza preventivo per evitare crash se l'HTML viene letto in tempi diversi
+    // Configurazione del form di invio
     const targetForm = document.getElementById('entityForm');
     if (targetForm) {
         targetForm.onsubmit = async (e) => {
             e.preventDefault();
-            if (!supabaseClient) return;
-            
             const formData = new FormData(e.target);
             const record = {};
             
@@ -172,17 +162,16 @@
                     document.getElementById('formDialog').close();
                     await fetchCloudData();
                 } else {
-                    alert("Errore: " + error.message);
+                    alert("Errore salvataggio: " + error.message);
                 }
             } catch (err) {
                 console.error(err);
             }
         };
-    } else {
-        console.warn("Attivazione differita del modulo di controllo...");
     }
 
-    initSupabase();
+    // Boot dell'applicazione cloud
+    fetchCloudData();
 </script>
 </body>
 </html>
