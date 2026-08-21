@@ -30,9 +30,9 @@
     <div id="kpis" class="grid"></div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Inizializzazione del sistema operativo cloud...</div>
+        <div id="recruitersTable">Connessione sicura al cloud di intelligence...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Inizializzazione del sistema operativo cloud...</div>
+        <div id="companiesTable">Connessione sicura al cloud di intelligence...</div>
     </div>
 </div>
 
@@ -47,16 +47,13 @@
     </form>
 </dialog>
 
-<!-- Cambiamo l'approccio usando un modulo nativo per evitare errori di caricamento oggetti globali -->
-<script type="module">
-    import { createClient } from 'https://jsdelivr.net'
+<!-- Importazione CDN alternativa specchiata da cdnjs per superare i blocchi regionali -->
+<script src="https://cloudflare.com"></script>
 
-    const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co";
+<script>
+    const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
-    
-    // Inizializzazione stabile tramite ESM
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
-    console.log("✅ Connessione Supabase stabilita via ESM Module nativo!");
+    let supabaseClient;
 
     const fieldsConfig = {
         recruiters: [
@@ -74,6 +71,14 @@
     let currentActiveType = 'recruiters';
 
     async function init() {
+        if (typeof supabase !== 'undefined') {
+            supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+            console.log("✅ Collegamento stabilito con successo!");
+        } else {
+            console.error("Inizializzazione forzata in corso...");
+            return;
+        }
+
         try {
             const resRecruiters = await supabaseClient.from('recruiters').select('*');
             db.recruiters = resRecruiters.data || [];
@@ -123,7 +128,7 @@
     function render() {
         let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
         if (db.recruiters.length === 0) {
-            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter trovato nel database cloud</td></tr>';
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter presente nel database</td></tr>';
         } else {
             db.recruiters.forEach(r => {
                 htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
@@ -134,7 +139,7 @@
 
         let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda trovata nel database cloud</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda presente nel database</td></tr>';
         } else {
             db.companies.forEach(c => {
                 htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
@@ -144,31 +149,33 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    // Inizializziamo il caricamento dati al boot della pagina
-    init();
+    window.addEventListener('DOMContentLoaded', () => {
+        init();
 
-    // Gestione dell'invio del modulo
-    document.getElementById('entityForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const record = {};
-        
-        fieldsConfig[currentActiveType].forEach(f => {
-            record[f.id] = formData.get(f.id);
-        });
+        document.getElementById('entityForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!supabaseClient) return;
+            
+            const formData = new FormData(e.target);
+            const record = {};
+            
+            fieldsConfig[currentActiveType].forEach(f => {
+                record[f.id] = formData.get(f.id);
+            });
 
-        try {
-            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-            if (!error) {
-                document.getElementById('formDialog').close();
-                await init();
-            } else {
-                alert("Errore Supabase durante il salvataggio: " + error.message);
+            try {
+                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                if (!error) {
+                    document.getElementById('formDialog').close();
+                    await init();
+                } else {
+                    alert("Errore salvataggio: " + error.message);
+                }
+            } catch (err) {
+                console.error(err);
             }
-        } catch (err) {
-            console.error(err);
-        }
-    };
+        };
+    });
 </script>
 </body>
 </html>
