@@ -394,25 +394,32 @@ function importData(e){
 }
 
 function exportCSV(){
- const rows=[['Categoria','Nome/Titolo','Azienda','Stato','Data prossima azione','Prossima azione']];
- const add=(cat,arr)=>arr.forEach(x=>rows.push([cat,x.name||x.title||x.company||'',x.company||'',x.status||'',x.nextDate||x.dueDate||'',x.nextAction||x.notes||'']));
- add('Recruiter',db.recruiters);add('Azienda',db.companies);add('Persona',db.people);add('Cantiere',db.sites);add('Candidatura',db.applications);add('Task',db.tasks);add('Documento',db.documents);
- const csv=rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(';')).join('\n');
- const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
- const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TCMS_NEXUS_RIEPILOGO_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href)
-}
+const add = (cat, arr) => arr.forEach(x => rows.push([cat, x.name || x.title || x.company || '', x.company || '', x.status || '']));
+add('Recruiter', db.recruiters);
+add('Azienda', db.companies);
+add('Persona', db.people);
+add('Cantiere', db.sites);
 
-function resetData(){
-    if(confirm('Azzera definitivamente tutti i dati locali?')){
+const csv = rows.map(r => r.map(v => '"' + String(v).replaceAll('"', '""') + '"').join(';')).join('\n');
+const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = 'TCMS_NEXUS_RIEPILOGO_' + new Date().toISOString().split('T')[0] + '.csv';
+a.click();
+
+function resetData() {
+    if (confirm('Azzera definitivamente tutti i dati locali?')) {
         localStorage.removeItem('tcms_nexus_db');
         buildNav();
         caricaDatiDaSupabase();
     }
 }
 
-// Chiusura sicura del blocco principale
-});
+// Avvio iniziale dei moduli e caricamento dati cloud
+buildNav();
+caricaDatiDaSupabase();
 </script>
+
 
 
 <button class="fab" onclick="toggleFabMenu()" aria-label="Inserimento rapido">+</button>
