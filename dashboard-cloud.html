@@ -28,9 +28,9 @@
     </div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Connessione al database...</div>
+        <div id="recruitersTable">Sincronizzazione cloud in corso...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Connessione al database...</div>
+        <div id="companiesTable">Sincronizzazione cloud in corso...</div>
     </div>
 </div>
 
@@ -46,7 +46,6 @@
 </dialog>
 
 <script>
-    // Configurazione chiavi dirette
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     
@@ -70,7 +69,6 @@
     
     let currentActiveType = 'recruiters';
 
-    // Chiamata REST nativa per caricare i dati senza usare librerie esterne
     async function loadData() {
         try {
             const response = await fetch(supabaseUrl + "/recruiters?select=*", { method: "GET", headers: headers });
@@ -88,8 +86,8 @@
             document.getElementById('recruitersTable').innerHTML = html;
             document.getElementById('companiesTable').innerHTML = '<table><tr><th>Azienda</th><th>Stato</th></tr><tr><td colspan="2">Nessuna azienda registrata</td></tr></table>';
         } catch (err) {
-            console.error("Errore di sincronizzazione:", err);
-            document.getElementById('recruitersTable').innerText = "Errore di connessione di rete.";
+            console.error(err);
+            document.getElementById('recruitersTable').innerText = "Errore di caricamento.";
         }
     }
 
@@ -125,37 +123,41 @@
         document.getElementById('formDialog').showModal();
     };
 
-    // Invio dati nativo tramite Fetch POST
-    document.getElementById('entityForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const record = {};
-        
-        fieldsConfig[currentActiveType].forEach(f => {
-            record[f.id] = formData.get(f.id);
-        });
+    // Protezione totale: eseguiamo i collegamenti agli elementi SOLO quando la pagina è caricata al 100%
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
 
-        try {
-            const response = await fetch(supabaseUrl + "/" + currentActiveType, {
-                method: "POST",
-                headers: { ...headers, "Prefer": "return=representation" },
-                body: JSON.stringify(record)
-            });
-            
-            if (response.ok) {
-                document.getElementById('formDialog').close();
-                loadData();
-            } else {
-                const errData = await response.json();
-                alert("Errore del database: " + (errData.message || response.statusText));
-            }
-        } catch (err) {
-            console.error(err);
+        const form = document.getElementById('entityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const record = {};
+                
+                fieldsConfig[currentActiveType].forEach(f => {
+                    record[f.id] = formData.get(f.id);
+                });
+
+                try {
+                    const response = await fetch(supabaseUrl + "/" + currentActiveType, {
+                        method: "POST",
+                        headers: { ...headers, "Prefer": "return=representation" },
+                        body: JSON.stringify(record)
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById('formDialog').close();
+                        loadData();
+                    } else {
+                        const errData = await response.json();
+                        alert("Errore database: " + (errData.message || response.statusText));
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
         }
-    };
-
-    // Boot automatico
-    loadData();
+    });
 </script>
 </body>
 </html>
