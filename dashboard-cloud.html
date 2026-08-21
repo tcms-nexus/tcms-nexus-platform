@@ -46,7 +46,8 @@
 </dialog>
 
 <script>
-    const supabaseUrl = "https://supabase.co";
+    // Configurazione dell'URL base assoluto per evitare disallineamenti di stringa
+    const baseApiUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     
     const headers = {
@@ -71,7 +72,9 @@
 
     async function loadData() {
         try {
-            const response = await fetch(supabaseUrl + "/recruiters?select=*", { method: "GET", headers: headers });
+            // Composizione URL fissa e controllata
+            const targetUrl = baseApiUrl + "recruiters?select=*";
+            const response = await fetch(targetUrl, { method: "GET", headers: headers });
             const data = await response.json();
             
             let html = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
@@ -87,7 +90,7 @@
             document.getElementById('companiesTable').innerHTML = '<table><tr><th>Azienda</th><th>Stato</th></tr><tr><td colspan="2">Nessuna azienda registrata</td></tr></table>';
         } catch (err) {
             console.error(err);
-            document.getElementById('recruitersTable').innerText = "Errore di caricamento.";
+            document.getElementById('recruitersTable').innerText = "Errore di caricamento dati.";
         }
     }
 
@@ -123,7 +126,6 @@
         document.getElementById('formDialog').showModal();
     };
 
-    // Protezione totale: eseguiamo i collegamenti agli elementi SOLO quando la pagina è caricata al 100%
     window.addEventListener('DOMContentLoaded', () => {
         loadData();
 
@@ -139,7 +141,8 @@
                 });
 
                 try {
-                    const response = await fetch(supabaseUrl + "/" + currentActiveType, {
+                    const postUrl = baseApiUrl + currentActiveType;
+                    const response = await fetch(postUrl, {
                         method: "POST",
                         headers: { ...headers, "Prefer": "return=representation" },
                         body: JSON.stringify(record)
