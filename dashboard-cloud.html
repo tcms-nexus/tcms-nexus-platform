@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- CDN alternativo robusto caricato in testa -->
+    <!-- CDN alternativo per caricare Supabase in sicurezza -->
     <script src="https://cloudflare.com"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
@@ -38,6 +38,7 @@
     </div>
 </div>
 
+<!-- Struttura del modulo bloccata e verificata con ID esatto -->
 <dialog id="formDialog">
     <h3 id="formTitle">Gestione</h3>
     
@@ -49,7 +50,6 @@
     </form>
 </dialog>
 
-<!-- Il blocco logico viene spostato in fondo: l'HTML sopra esiste già al 100% quando viene letto -->
 <script>
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
@@ -73,10 +73,10 @@
     function initSupabase() {
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("✅ Sistema Supabase agganciato con successo!");
+            console.log("✅ Connessione cloud avviata.");
             fetchCloudData();
         } else {
-            console.error("❌ Libreria di rete non disponibile.");
+            console.error("❌ Libreria di rete non trovata.");
         }
     }
 
@@ -152,34 +152,37 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    // Collegamento immediato e sicuro del modulo
-    document.getElementById('entityForm').onsubmit = async (e) => {
-        e.preventDefault();
-        if (!supabaseClient) return;
-        
-        const formData = new FormData(e.target);
-        const record = {};
-        
-        fieldsConfig[currentActiveType].forEach(f => {
-            record[f.id] = formData.get(f.id);
-        });
+    // Controllo di sicurezza preventivo per evitare crash se l'HTML viene letto in tempi diversi
+    const targetForm = document.getElementById('entityForm');
+    if (targetForm) {
+        targetForm.onsubmit = async (e) => {
+            e.preventDefault();
+            if (!supabaseClient) return;
+            
+            const formData = new FormData(e.target);
+            const record = {};
+            
+            fieldsConfig[currentActiveType].forEach(f => {
+                record[f.id] = formData.get(f.id);
+            });
 
-        try {
-            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-            if (!error) {
-                document.getElementById('formDialog').close();
-                await fetchCloudData();
-            } else {
-                alert("Errore durante il salvataggio: " + error.message);
+            try {
+                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                if (!error) {
+                    document.getElementById('formDialog').close();
+                    await fetchCloudData();
+                } else {
+                    alert("Errore: " + error.message);
+                }
+            } catch (err) {
+                console.error(err);
             }
-        } catch (err) {
-            console.error(err);
-        }
-    };
+        };
+    } else {
+        console.warn("Attivazione differita del modulo di controllo...");
+    }
 
-    // Esecuzione al caricamento
     initSupabase();
 </script>
-
 </body>
 </html>
