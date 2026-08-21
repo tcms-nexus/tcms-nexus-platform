@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
+    <!-- CDN alternativo robusto caricato in testa -->
+    <script src="https://cloudflare.com"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
         body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--bg-card); border-radius: 8px; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #18223f; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); }
@@ -22,6 +23,7 @@
     </style>
 </head>
 <body>
+
 <div class="container">
     <div class="header">
         <h1>TCMS <span style="color:var(--accent)">NEXUS</span></h1>
@@ -30,9 +32,9 @@
     <div id="kpis" class="grid"></div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Connessione sicura al cloud di intelligence...</div>
+        <div id="recruitersTable">Connessione al database cloud...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Connessione sicura al cloud di intelligence...</div>
+        <div id="companiesTable">Connessione al database cloud...</div>
     </div>
 </div>
 
@@ -47,9 +49,7 @@
     </form>
 </dialog>
 
-<!-- Importazione CDN alternativa specchiata da cdnjs per superare i blocchi regionali -->
-<script src="https://cloudflare.com"></script>
-
+<!-- Il blocco logico viene spostato in fondo: l'HTML sopra esiste già al 100% quando viene letto -->
 <script>
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
@@ -70,15 +70,18 @@
     let db = { recruiters: [], companies: [] };
     let currentActiveType = 'recruiters';
 
-    async function init() {
+    function initSupabase() {
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("✅ Collegamento stabilito con successo!");
+            console.log("✅ Sistema Supabase agganciato con successo!");
+            fetchCloudData();
         } else {
-            console.error("Inizializzazione forzata in corso...");
-            return;
+            console.error("❌ Libreria di rete non disponibile.");
         }
+    }
 
+    async function fetchCloudData() {
+        if (!supabaseClient) return;
         try {
             const resRecruiters = await supabaseClient.from('recruiters').select('*');
             db.recruiters = resRecruiters.data || [];
@@ -86,9 +89,9 @@
             const resCompanies = await supabaseClient.from('companies').select('*');
             db.companies = resCompanies.data || [];
 
-            render();
+            renderTables();
         } catch (err) {
-            console.error("Errore sincronizzazione tabelle:", err);
+            console.error("Errore sincronizzazione dati:", err);
         }
     }
 
@@ -125,10 +128,10 @@
         document.getElementById('formDialog').showModal();
     };
 
-    function render() {
+    function renderTables() {
         let htmlRecruiters = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
         if (db.recruiters.length === 0) {
-            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter presente nel database</td></tr>';
+            htmlRecruiters += '<tr><td colspan="3">Nessun recruiter presente nel database cloud</td></tr>';
         } else {
             db.recruiters.forEach(r => {
                 htmlRecruiters += `<tr><td>${r.name || ''}</td><td>${r.company || ''}</td><td>${r.status || ''}</td></tr>`;
@@ -139,7 +142,7 @@
 
         let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            htmlCompanies += '<tr><td colspan="2">Nessuna azienda presente nel database</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda presente nel database cloud</td></tr>';
         } else {
             db.companies.forEach(c => {
                 htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
@@ -149,33 +152,34 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-        init();
+    // Collegamento immediato e sicuro del modulo
+    document.getElementById('entityForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!supabaseClient) return;
+        
+        const formData = new FormData(e.target);
+        const record = {};
+        
+        fieldsConfig[currentActiveType].forEach(f => {
+            record[f.id] = formData.get(f.id);
+        });
 
-        document.getElementById('entityForm').onsubmit = async (e) => {
-            e.preventDefault();
-            if (!supabaseClient) return;
-            
-            const formData = new FormData(e.target);
-            const record = {};
-            
-            fieldsConfig[currentActiveType].forEach(f => {
-                record[f.id] = formData.get(f.id);
-            });
-
-            try {
-                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-                if (!error) {
-                    document.getElementById('formDialog').close();
-                    await init();
-                } else {
-                    alert("Errore salvataggio: " + error.message);
-                }
-            } catch (err) {
-                console.error(err);
+        try {
+            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+            if (!error) {
+                document.getElementById('formDialog').close();
+                await fetchCloudData();
+            } else {
+                alert("Errore durante il salvataggio: " + error.message);
             }
-        };
-    });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // Esecuzione al caricamento
+    initSupabase();
 </script>
+
 </body>
 </html>
