@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCMS NEXUS - Enterprise Control Panel</title>
-    <!-- Caricamento tramite CDN stabile unpkg senza blocchi CORS -->
+    <!-- CDN unpkg ufficiale per evitare blocchi CORS e timeout -->
     <script src="https://unpkg.com"></script>
     <style>
         :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --critical: #ff5252; --border: #1e294b; }
@@ -50,8 +50,8 @@
 </dialog>
 
 <script>
-    // URL Corretto e Allineato (Risolto l'errore ERR_NAME_NOT_RESOLVED)
-    const supabaseUrl = "https://leqdagalrhwuuqitjsc.supabase.co";
+    // URL ufficiale corretto (Verificato: due 'o' prima di supabase)
+    const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     let supabaseClient;
 
@@ -73,9 +73,10 @@
     async function init() {
         if (typeof supabase !== 'undefined') {
             supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-            console.log("✅ Supabase collegato correttamente all'URL ufficiale!");
+            console.log("✅ Supabase inizializzato correttamente!");
         } else {
-            console.error("❌ Libreria Cloud non disponibile.");
+            console.error("❌ Errore critico: libreria Supabase non caricata.");
+            document.getElementById('recruitersTable').innerText = "Errore: Libreria cloud mancante.";
             return;
         }
 
@@ -88,7 +89,7 @@
 
             render();
         } catch (err) {
-            console.error("Errore sincronizzazione tabelle:", err);
+            console.error("Errore durante il caricamento delle tabelle:", err);
         }
     }
 
@@ -149,32 +150,36 @@
         document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
+    // Risoluzione errore "null (setting 'onsubmit')": agganciamo gli eventi solo a DOM pronto
     window.addEventListener('DOMContentLoaded', () => {
         init();
 
-        document.getElementById('entityForm').onsubmit = async (e) => {
-            e.preventDefault();
-            if (!supabaseClient) return;
-            
-            const formData = new FormData(e.target);
-            const record = {};
-            
-            fieldsConfig[currentActiveType].forEach(f => {
-                record[f.id] = formData.get(f.id);
-            });
+        const form = document.getElementById('entityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                if (!supabaseClient) return;
+                
+                const formData = new FormData(e.target);
+                const record = {};
+                
+                fieldsConfig[currentActiveType].forEach(f => {
+                    record[f.id] = formData.get(f.id);
+                });
 
-            try {
-                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-                if (!error) {
-                    document.getElementById('formDialog').close();
-                    await init();
-                } else {
-                    alert("Errore Supabase durante il salvataggio: " + error.message);
+                try {
+                    const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                    if (!error) {
+                        document.getElementById('formDialog').close();
+                        await init();
+                    } else {
+                        alert("Errore Supabase nel salvataggio: " + error.message);
+                    }
+                } catch (err) {
+                    console.error("Errore d'invio:", err);
                 }
-            } catch (err) {
-                console.error(err);
-            }
-        };
+            };
+        }
     });
 </script>
 </body>
