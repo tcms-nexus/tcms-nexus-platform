@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCMS NEXUS - Enterprise Control Panel v3</title>
+    <style>
+        :root { --bg-main: #0a0f1d; --bg-card: #131a30; --text-main: #e2e8f0; --text-muted: #8a99ad; --accent: #00e676; --border: #1e294b; }
+        body { font-family: sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: var(--bg-card); border-radius: 8px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #18223f; font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); }
+        .btn { background: #1e294b; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn.good { background: var(--accent); color: #0a0f1d; }
+        input, select { width: 100%; padding: 10px; background: #18223f; border: 1px solid var(--border); color: white; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; display: block; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
+        dialog { background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 25px; width: 90%; max-width: 500px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>TCMS <span style="color:var(--accent)">NEXUS v3</span></h1>
+        <button class="btn good" onclick="openForm('recruiters')">+ Nuovo Recruiter</button>
+    </div>
+    <div id="tables">
+        <h3>📋 Recruiter Registrati</h3>
+        <div id="recruitersTable">Sincronizzazione cloud in corso...</div>
+        <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
+        <div id="companiesTable">Sincronizzazione cloud in corso...</div>
+    </div>
+</div>
+
+<dialog id="formDialog">
+    <h3 id="formTitle">Gestione</h3>
+    
+        <div id="formFields"></div>
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn good">Salva</button>
+            <button type="button" class="btn" onclick="document.getElementById('formDialog').close()" style="margin-left: 10px;">Annulla</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    // URL Assoluto e blindato - Nessun errore di unione stringhe possibile
+    const targetUrl = "https://supabase.co*";
+    const postUrl = "https://supabase.co";
+    const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
+    
+    const headers = {
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Content-Type": "application/json"
+    };
+
+    const fieldsConfig = {
+        recruiters: [
+            { id: 'name', label: 'Nome', type: 'text' },
+            { id: 'company', label: 'Azienda', type: 'text' },
+            { id: 'status', label: 'Stato', type: 'select', options: ['Da contattare', 'Contattato'] }
+        ],
+        companies: [
+            { id: 'name', label: 'Azienda', type: 'text' },
+            { id: 'status', label: 'Stato', type: 'select', options: ['Target', 'Partner'] }
+        ]
+    };
+    
+    let currentActiveType = 'recruiters';
+
+    async function loadData() {
+        try {
+            console.log("Chiamata in corso a:", targetUrl);
+            const response = await fetch(targetUrl, { method: "GET", headers: headers });
+            const data = await response.json();
+            
+            let html = '<table><tr><th>Nome</th><th>Azienda</th><th>Stato</th></tr>';
+            if (!data || data.length === 0) {
+                html += '<tr><td colspan="3">Nessun recruiter trovato nel database cloud</td></tr>';
+            } else {
+                data.forEach(r => {
+                    html += '<tr><td>' + (r.name || '') + '</td><td>' + (r.company || '') + '</td><td>' + (r.status || '') + '</td></tr>';
+                });
+            }
+            html += '</table>';
+            document.getElementById('recruitersTable').innerHTML = html;
+            document.getElementById('companiesTable').innerHTML = '<table><tr><th>Azienda</th><th>Stato</th></tr><tr><td colspan="2">Nessuna azienda registrata</td></tr></table>';
+        } catch (err) {
+            console.error(err);
+            document.getElementById('recruitersTable').innerText = "Errore di caricamento dati.";
+        }
+    }
+
+    window.openForm = (type) => {
+        currentActiveType = type;
+        document.getElementById('formTitle').innerText = type === 'recruiters' ? 'Nuovo Recruiter' : 'Nuova Azienda';
+        const container = document.getElementById('formFields');
+        container.innerHTML = '';
+        
+        fieldsConfig[type].forEach(f => {
+            const label = document.createElement('label');
+            label.innerText = f.label;
+            container.appendChild(label);
+            
+            if (f.type === 'text') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = f.id;
+                input.required = true;
+                container.appendChild(input);
+            } else if (f.type === 'select') {
+                const select = document.createElement('select');
+                select.name = f.id;
+                f.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.innerText = opt;
+                    select.appendChild(option);
+                });
+                container.appendChild(select);
+            }
+        });
+        document.getElementById('formDialog').showModal();
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadData();
+
+        const form = document.getElementById('entityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const record = {};
+                
+                fieldsConfig[currentActiveType].forEach(f => {
+                    record[f.id] = formData.get(f.id);
+                });
+
+                try {
+                    const response = await fetch(postUrl + currentActiveType, {
+                        method: "POST",
+                        headers: { ...headers, "Prefer": "return=representation" },
+                        body: JSON.stringify(record)
+                    });
+                    
+                    if (response.ok) {
+                        document.getElementById('formDialog').close();
+                        loadData();
+                    } else {
+                        const errData = await response.json();
+                        alert("Errore database: " + (errData.message || response.statusText));
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            };
+        }
+    });
+</script>
+</body>
+</html>
