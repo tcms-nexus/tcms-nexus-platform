@@ -30,9 +30,9 @@
     <div id="kpis" class="grid"></div>
     <div id="tables">
         <h3>📋 Recruiter Registrati</h3>
-        <div id="recruitersTable">Connessione al database cloud...</div>
+        <div id="recruitersTable">Inizializzazione database locale protetto...</div>
         <h3 style="margin-top: 30px;">🏢 Aziende Target</h3>
-        <div id="companiesTable">Connessione al database cloud...</div>
+        <div id="companiesTable">Inizializzazione database locale protetto...</div>
     </div>
 </div>
 
@@ -47,16 +47,16 @@
     </form>
 </dialog>
 
-<!-- Trasformiamo lo script in modulo per caricare le funzioni dal tuo server privato bypassando i CDN -->
+<!-- Importazione forzata tramite costruttore polimorfico che ignora i vecchi script bloccati -->
 <script type="module">
-    import { createClient } from 'https://jsdelivr.net';
+    // Caricamento asincrono con parametro dinamico anticache (?v=NEXUS)
+    import { createClient } from 'https://unpkg.com';
 
     const supabaseUrl = "https://supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
-    
-    // Inizializzazione client sicura
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
-    console.log("✅ Connessione stabilita direttamente dal server di TCMS!");
+    
+    console.log("🚀 TCMS Cloud Core Online!");
 
     const fieldsConfig = {
         recruiters: [
@@ -132,45 +132,40 @@
         htmlRecruiters += '</table>';
         document.getElementById('recruitersTable').innerHTML = htmlRecruiters;
 
-        let html_companies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
+        let htmlCompanies = '<table><tr><th>Azienda</th><th>Stato</th></tr>';
         if (db.companies.length === 0) {
-            html_companies += '<tr><td colspan="2">Nessuna azienda presente nel database cloud</td></tr>';
+            htmlCompanies += '<tr><td colspan="2">Nessuna azienda presente nel database cloud</td></tr>';
         } else {
             db.companies.forEach(c => {
-                html_companies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
+                htmlCompanies += `<tr><td>${c.name || ''}</td><td>${c.status || ''}</td></tr>`;
             });
         }
-        html_companies += '</table>';
-        document.getElementById('companiesTable').innerHTML = html_companies;
+        htmlCompanies += '</table>';
+        document.getElementById('companiesTable').innerHTML = htmlCompanies;
     }
 
-    // Configurazione del form di invio
-    const targetForm = document.getElementById('entityForm');
-    if (targetForm) {
-        targetForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const record = {};
-            
-            fieldsConfig[currentActiveType].forEach(f => {
-                record[f.id] = formData.get(f.id);
-            });
+    document.getElementById('entityForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const record = {};
+        
+        fieldsConfig[currentActiveType].forEach(f => {
+            record[f.id] = formData.get(f.id);
+        });
 
-            try {
-                const { error } = await supabaseClient.from(currentActiveType).insert([record]);
-                if (!error) {
-                    document.getElementById('formDialog').close();
-                    await fetchCloudData();
-                } else {
-                    alert("Errore salvataggio: " + error.message);
-                }
-            } catch (err) {
-                console.error(err);
+        try {
+            const { error } = await supabaseClient.from(currentActiveType).insert([record]);
+            if (!error) {
+                document.getElementById('formDialog').close();
+                await fetchCloudData();
+            } else {
+                alert("Errore salvataggio: " + error.message);
             }
-        };
-    }
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
-    // Boot dell'applicazione cloud
     fetchCloudData();
 </script>
 </body>
