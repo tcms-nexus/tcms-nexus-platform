@@ -370,22 +370,57 @@ async function removeItem(type, id) {
   }
 }
 function askSofia(){
- const p=aiPrompt.value.toLowerCase();
- const today=new Date().toISOString().slice(0,10);
- const overdue=db.tasks.filter(x=>x.status!=='Completato'&&x.due_date&&x.due_date<today);
- const waiting=db.recruiters.filter(x=>['Invito inviato','Stand-by'].includes(x.status));
- const follow=db.applications.filter(x=>x.next_date&&x.next_date<=today&&!['Rifiutata','Sospesa'].includes(x.status));
- let out=`RIEPILOGO OPERATIVO TCMS NEXUS\n\n`;
- out+=`• Recruiter registrati: ${db.recruiters.length}\n• Aziende: ${db.companies.length}\n• Persone/contatti: ${db.people.length}\n• Cantieri: ${db.sites.length}\n• Candidature: ${db.applications.length}\n• Task aperti: ${db.tasks.filter(x=>x.status!=='Completato').length}\n`;
- out+=`• Task scaduti: ${overdue.length}\n• Recruiter in attesa/stand-by: ${waiting.length}\n• Follow-up candidature da fare: ${follow.length}\n\n`;
- if(overdue.length) out+=`PRIORITÀ IMMEDIATE\n${overdue.slice(0,5).map(x=>'— '+x.title+' (scaduto '+x.due_date+')').join('\n')}\n\n`;
- if(follow.length) out+=`FOLLOW-UP CANDIDATURE\n${follow.slice(0,5).map(x=>'— '+x.company+': '+(x.next_action||'ricontattare')).join('\n')}\n\n`;
- if(waiting.length) out+=`RECRUITER DA RIPRENDERE\n${waiting.slice(0,5).map(x=>'— '+x.name+' · '+x.company+' · '+x.status).join('\n')}\n\n`;
- const ready=db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì');
- if(ready.length) out+=`PROFESSIONISTI VERIFICATI DISPONIBILI SUBITO\n${ready.slice(0,8).map(x=>'— '+x.name+' · '+(x.role||x.skills||'profilo')+' · '+(x.phone||x.email||'contatto da completare')).join('\n')}\n\n`;
- out+=`PRIORITÀ: agire prima sugli scaduti, poi sulle azioni di oggi. Il tempo è il cardine.`;
- aiOutput.textContent=out;
+    const p = aiPrompt.value.toLowerCase();
+    const today = new Date().toISOString().slice(0,10);
+    
+    const overdue = db.tasks.filter(x=>x.status!=='Completato'&&x.due_date&&x.due_date<today);
+    const waiting = db.recruiters.filter(x=>['Invito inviato','Stand-by'].includes(x.status));
+    const follow = db.applications.filter(x=>x.next_date&&x.next_date<=today&&!['Rifiutata','Sospesa'].includes(x.status));
+    
+    let out = 'RIEPILOGO OPERATIVO TCMS NEXUS\n\n';
+    out += '• Recruiter registrati: ' + db.recruiters.length + '\n• Aziende: ' + db.companies.length + '\n• Persone/contatti: ' + db.people.length + '\n';
+    out += '• Task scaduti: ' + overdue.length + '\n• Recruiter in attesa/stand-by: ' + waiting.length + '\n• Follow-up candidature: ' + follow.length + '\n\n';
+    
+    if(overdue.length) out += '• PRIORITÀ IMMEDIATE\n' + overdue.slice(0,5).map(x=>'- ' + x.title + ' (scaduto ' + x.due_date + ')').join('\n') + '\n\n';
+    if(follow.length) out += '• FOLLOW-UP CANDIDATURE\n' + follow.slice(0,5).map(x=>'- ' + x.company).join('\n') + '\n\n';
+    if(waiting.length) out += '• RECRUITER DA RIPRENDERE\n' + waiting.slice(0,5).map(x=>'- ' + x.name + ' : ' + x.company).join('\n') + '\n\n';
+    
+    const ready = db.people.filter(x=>x.availability==='Immediata'&&x.verified==='Sì');
+    if(ready.length) out += '• PROFESSIONISTI VERIFICATI DISPONIBILI SUBITO\n' + ready.slice(0,8).map(x=>'- ' + x.name).join('\n') + '\n\n';
+    
+    out += '• PRIORITÀ: agire prima sugli scaduti, poi sulle azioni di oggi. Il tempo è il cardine.';
+    aiOutput.textContent = out;
+
+    // --- AGGANCIO CORE SUPABASE ASINCRONO ---
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const payloadCloud = {
+            prompt_ricerca: aiPrompt.value || "Analisi automatica",
+            metriche: {
+                recruiter_totali: db.recruiters.length,
+                aziende_totali: db.companies.length,
+                contatti_totali: db.people.length,
+                task_scaduti: overdue.length,
+                recruiter_in_attesa: waiting.length,
+                followup_candidature: follow.length,
+                disponibili_subito: ready.length
+            },
+            report_testuale: out,
+            timestamp: new Date().toISOString()
+        };
+
+        supabaseClient
+            .from('matches_full')
+            .insert([{ payload: payloadCloud, status: "pending" }])
+            .then(res => {
+                if (res.error) {
+                    console.error("[CLOUD ERROR] Errore sincronizzazione core:", res.error.message);
+                } else {
+                    console.log("[CLOUD SUCCESS] Sincronizzazione automatica core completata.");
+                }
+            });
+    }
 }
+
 
 function exportData(){
  const blob=new Blob([JSON.stringify({...db,_tcmsVersion:APP_VERSION,_exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
