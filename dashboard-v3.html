@@ -256,9 +256,19 @@
                 let { error } = await supabaseClient.from(currentActiveType).update(record).eq('id', editRecordId);
                 if (error) throw error;
             } else {
-                let { error } = await supabaseClient.from(currentActiveType).insert([record]);
-                if (error) throw error;
-            }
+                        // Pulisce gli UUID vuoti e forza il signal_type se siamo su market_signals
+        if (currentActiveType === 'market_signals') {
+            if (record.origin_id === '') record.origin_id = null;
+            if (record.observer_id === '') record.observer_id = null;
+            if (record.project_id === '') record.project_id = null;
+            record.signal_type = 'manual';
+        }
+
+        let { error } = await supabaseClient.from(currentActiveType).insert([record]);
+        if (error) throw error;
+
+                
+            
             document.getElementById('formDialog').close();
             await caricaDatiDaSupabase();
         } catch (err) {
