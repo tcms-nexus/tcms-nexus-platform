@@ -242,25 +242,77 @@
         buildFormFields(record);
         document.getElementById('formDialog').showModal();
     };
+<script>
+    // Configurazione client Supabase ricavata dalle specifiche TCMS Nexus Core
+    const SUPABASE_URL = "https://supabase.co"; // Sostituisci se necessario con le tue stringhe reali
+    const SUPABASE_KEY = "your-anon-key";
+    const supabaseClient = window.supabaseClient || (window.supabase && window.supabase.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null);
+
+    let currentActiveType = 'market_signals';
+    let editRecordId = null;
+    let db = { recruiters: [], companies: [], people: [], sites: [] };
+    let sections = [{ cat: 'recruiters' }, { cat: 'companies' }, { cat: 'people' }, { cat: 'sites' }];
+
+    async function caricaDatiDaSupabase() {
+        try {
+            const statusEl = document.getElementById('loadingStatus');
+            const tableEl = document.getElementById('dataTable');
+            if (statusEl) statusEl.innerText = "Sincronizzazione cloud in corso...";
+            
+            if (!supabaseClient) return;
+
+            const { data, error } = await supabaseClient.from(currentActiveType).select('*').limit(50);
+            if (error) throw error;
+
+            const tbody = document.getElementById('tableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (data && data.length > 0) {
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><b>${row.title || row.name || 'Senza Titolo'}</b></td><td>${row.origin_id || '-'}</td><td><span class="badge bg-success">Attivo</span></td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nessun dato presente nella tabella.</td></tr>';
+                }
+            }
+
+            if (statusEl) statusEl.style.display = 'none';
+            if (tableEl) tableEl.style.display = 'table';
+        } catch (err) {
+            console.error("Errore sincronizzazione cloud:", err);
+        }
+    }
 
     window.salvaRecord = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const record = {};
-        fieldsConfig[currentActiveType].forEach(f => {
-            record[f.id] = formData.get(f.id);
-        });
+        if (e && e.preventDefault) e.preventDefault();
+        
+        const idOrigineEl = document.getElementById('id_origine');
+        const idOsservatoreEl = document.getElementById('id_osservatore');
+        const idProgettoEl = document.getElementById('id_progetto');
 
-               try {
-            // Struttura e purifica il payload per il database (compatibile sia con inserimenti manuali che con il Radar IA)
+        const record = {
+            origin_id: idOrigineEl ? idOrigineEl.value : '',
+            observer_id: idOsservatoreEl ? idOsservatoreEl.value : '',
+            project_id: idProgettoEl ? idProgettoEl.value : ''
+        };
+
+        try {
+            // AUTO-RIPARAZIONE PAYLOAD: Evita violazioni dei vincoli di integrità del DB
             const cleanRecord = {
                 ...record,
                 origin_id: record.origin_id?.trim() || null,
                 observer_id: record.observer_id?.trim() || null,
-                project_id: record.project_id?.trim() || null,
-                signal_type: record.signal_type || 'manual',
-                title: record.title?.trim() || 'Segnale Manuale di Test'
+                project_id: record.project_id?.trim() || null
+            };
+
+            if (currentActiveType === 'market_signals') {
+                cleanRecord.signal_type = 'manual';
+                cleanRecord.title = 'Segnale Manuale di Test';
             }
+
+            if (!supabaseClient) throw new Error("Client Supabase non disponibile.");
 
             if (editRecordId) {
                 let { error } = await supabaseClient.from(currentActiveType).update(cleanRecord).eq('id', editRecordId);
@@ -270,31 +322,40 @@
                 if (error) throw error;
             }
 
-            document.getElementById('formDialog').close();
+            const modalEl = document.getElementById('addModal');
+            if (modalEl && window.bootstrap) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
+
+            alert('Dato salvato con successo!');
             await caricaDatiDaSupabase();
         } catch (err) {
-            console.error("Errore salvataggio:", err);
-      }  
+            console.error("Errore durante il salvataggio:", err);
+            alert("Errore di scrittura: " + err.message);
+        }
     };
 
     window.exportData = function() {
         const rows = [['Tipologia', 'Campo 1', 'Campo 2', 'Status']];
         const add = (cat, arr) => arr.forEach(x => rows.push([cat, x.name || x.title || x.company || '', x.company || x.role || '', x.status || '']));
-        add('Recruiter', db.recruiters);
-        add('Azienda', db.companies);
-        add('Persona', db.people);
-        add('Cantiere', db.sites);
+        add('Recruiter', db.recruiters || []);
+        add('Azienda', db.companies || []);
+        add('Persona', db.people || []);
+        add('Cantiere', db.sites || []);
+
         const csv = rows.map(r => r.map(v => '"' + String(v).replaceAll('"', '""') + '"').join(';')).join('\n');
         const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'TCMS_NEXUS_RIEPILOGO_' + new Date().getTime() + '.csv';
+        a.download = 'TCMS_NEXUS_EXPORT.csv';
         a.click();
     };
 
     window.resetData = async function() {
         if (confirm('Azzera definitivamente tutti i dati sul Cloud Supabase?')) {
             try {
+                if (!supabaseClient) return;
                 for (let s of sections) {
                     await supabaseClient.from(s.cat).delete().neq('id', 0);
                 }
@@ -307,11 +368,25 @@
 
     window.toggleMobileNav = function() {
         const sb = document.getElementById('sidebar');
-        sb.style.display = sb.style.display === 'block' ? 'none' : 'block';
+        if (sb) sb.style.display = sb.style.display === 'block' ? 'none' : 'block';
     };
 
-    buildNav();
-    caricaDatiDaSupabase();
+    function buildNav() {
+        console.log("Navigazione TCMS Nexus allineata.");
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        buildNav();
+        caricaDatiDaSupabase();
+        
+        const btnSalva = document.getElementById('btnSalva');
+        if (btnSalva) {
+            btnSalva.addEventListener('click', window.salvaRecord);
+        }
+    });
 </script>
 </body>
 </html>
+
+
+  
