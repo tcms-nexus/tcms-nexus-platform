@@ -89,7 +89,7 @@
 </div>
 <div id="formDialog" style="border:none; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin:auto; padding:20px; width:100%; max-width:500px;">
     <h2 id="formTitle" style="margin-bottom:20px; color:#1e293b; font-size:20px;">Nuovo Recruiter</h2>
-    
+    <form id="entityForm" class="form" onsubmit="window.salvaRecord(event)">
         <div id="formFields" class="form"></div>
         <div class="actions">
             <button class="btn btn-secondary" type="button" onclick="document.getElementById('formDialog').close()">Annulla</button>
@@ -234,7 +234,7 @@
         document.getElementById('formDialog').showModal();
     };
 
-    document.getElementById('entityForm').onsubmit = async (e) => {
+    window.salvaRecord = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const record = {};
