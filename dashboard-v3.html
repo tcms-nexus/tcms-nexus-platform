@@ -262,6 +262,7 @@
             if (record.observer_id === '') record.observer_id = null;
             if (record.project_id === '') record.project_id = null;
             record.signal_type = 'manual';
+            record.title = 'Segnale Manuale di Test';
         }
 
         let { error } = await supabaseClient.from(currentActiveType).insert([record]);
