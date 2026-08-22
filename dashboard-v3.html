@@ -3,217 +3,296 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCMS NEXUS - Enterprise Control</title>
-    <link href="https://jsdelivr.net" rel="stylesheet">
-    <script src="https://jsdelivr.net"></script>
+    <title>TCMS NEXUS - Enterprise Control Panel</title>
     <style>
-        body { background-color: #0f172a; font-family: system-ui, sans-serif; color: #f8fafc; }
-        .sidebar { background-color: #1e293b; min-height: 100vh; padding: 24px; border-right: 1px solid #334155; }
-        .main-content { padding: 40px; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; }
-        .table { color: #f8fafc; --bs-table-bg: transparent; }
-        .table th { color: #94a3b8; border-bottom: 2px solid #334155; }
-        .table td { border-bottom: 1px solid #334155; vertical-align: middle; }
-        .form-control { background-color: #0f172a; border: 1px solid #334155; color: white; }
-        .form-control:focus { background-color: #0f172a; color: white; border-color: #10b981; box-shadow: none; }
-        .modal-content { background-color: #1e293b; border: 1px solid #334155; color: white; }
+        :-webkit-any(code,pre){font-family:monospace}
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,helvetica,aerial,sans-serif;background:#f8f9fa;color:#333}
+        .app-container{display:flex;min-height:100vh}
+        sidebar{width:250px;background:#1e293b;color:#fff;padding:20px}
+        .brand{font-size:1.5custom;font-weight:bold;margin-bottom:30px}
+        .nav-link{display:block;padding:10px 15px;color:#cbd5e1;text-decoration:none;margin-bottom:5px;border-radius:4px}
+        .nav-link:hover,.nav-link.active{background:#334155;color:#fff}
+        main{flex:1;padding:30px}
+        .header{display:flex;justify-content:content;justify-content:space-between;align-items:center;margin-bottom:30px}
+        .header h1{font-size:24px;color:#1e293b}
+        .btn{padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:14px}
+        .btn-primary{background:#10b981;color:#fff}
+        .btn-secondary{background:#64748b;color:#fff}
+        .btn-danger{background:#ef4444;color:#fff}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:30px}
+        .card{background:#fff;border:1px solid #e2d8f0;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+        .card h3{margin-bottom:14px;color:#475569}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{padding:12px;text-align:left;border-bottom:1px solid #e2d8f0}
+        th{background:#f8f9fa;color:#64748b;font-weight:600}
+        .fallback{color:#ef4444;font-style:italic;padding:10px 0}
+        .fallback.sinck{color:#475569}
+        .mobilebar{display:none;background:#1e293b;padding:10px;justify-content:space-between;color:#fff}
+        .toolbar{display:flex;gap:10px;margin-top:20px}
+        dialog{border:none;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);margin:auto;padding:0px;width:100%;max-width:500px}
+        .modal{padding:20px}
+        .modal h2{margin-bottom:20px;color:#1e293b;font-size:20px}
+        .form{display:flex;flex-direction:column;gap:15px}
+        .form-group{display:flex;flex-direction:column;gap:5px}
+        .form-group label{font-size:14px;font-weight:600;color:#475569}
+        .form-group input,.form-group select{padding:10px;border:1px solid #cbd5e1;border-radius:4px;font-size:14px}
+        .actions{display:flex;gap:10px;margin-top:10px}
+        .actions .btn{flex:1}
+        @media (max-width:768px){
+            .app-container{flex-direction:column}
+            sidebar{display:none;width:100%}
+            .mobilebar{display:flex}
+        }
     </style>
 </head>
 <body>
-
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 sidebar" id="sidebar">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="text-emerald-400 m-0" style="color: #10b981;">TCMS NEXUS</h3>
-                <button class="btn btn-sm btn-outline-light d-md-none" onclick="window.toggleMobileNav()">Menu</button>
-            </div>
-            <p class="text-muted small">Enterprise Control Platform v3.0</p>
-            <hr style="border-color: #334155;">
+<div class="mobilebar" id="mobilebar">
+    <div class="brand">TCMS NEXUS</div>
+    <button class="btn btn-secondary" onclick="toggleMobileNav()">Menu</button>
+</div>
+<div class="app-container">
+    <sidebar id="sidebar">
+        <div class="brand">TCMS NEXUS</div>
+        <nav id="navLinks"></nav>
+    </sidebar>
+    <main>
+        <div class="header">
+            <h1 id="pageTitle">TCMS NEXUS - Enterprise Control</h1>
+            <button class="btn btn-primary" id="addBtn">+ Nuovo Recruiter</button>
         </div>
-
-        <!-- Main Workspace -->
-        <div class="col-md-9 main-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="m-0 fw-bold">TCMS NEXUS - Enterprise Control</h2>
+        <div class="grid" id="mainGrid">
+            <div class="card">
+                <h3 id="tableTitle">Recruiter Registrati</h3>
+                <div style="overflow-X:auto;">
+                    <table>
+                        <thead id="tableHead">
+                            <tr>
+                                <th>Nome</th>
+                                <th>Azienda</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="3" class="fallback">Sincronizzazione cloud in corso...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <button class="btn btn-success px-4" style="background-color: #10b981; border: none;" data-bs-toggle="modal" data-bs-target="#addModal">+ Nuovo Recruiter</button>
-            </div>
-
-            <!-- Data Table Card -->
-            <div class="card mb-4">
-                <h4 class="mb-3 fw-bold">Recruiter Registrati</h4>
-                <div id="loadingStatus" class="text-warning">Sincronizzazione cloud in corso...</div>
-                <table class="table mt-2" id="dataTable" style="display:none;">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Azienda</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
-
-            <!-- Control Actions Footer -->
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary px-3" onclick="window.exportData()">Esporta backup JSON</button>
-                <button class="btn btn-secondary px-3">Importa backup</button>
-                <button class="btn btn-danger px-3" onclick="window.resetData()">Azzera dati</button>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Modal Modulo Inserimento Manuale -->
-<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="border-bottom: 1px solid #334155;">
-                <h5 class="modal-title fw-bold" id="formTitle">Inserisci Segnale Manuale</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="signalForm">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">ID Origine / Fonte (UUID)</label>
-                        <input type="text" class="form-control" id="id_origine" value="a1bc8834-0192-4c22-b911-d5729104b2a4">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">ID Osservatore (UUID)</label>
-                        <input type="text" class="form-control" id="id_osservatore" placeholder="Opzionale">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label text-muted small">ID Progetto Associato (UUID)</label>
-                        <input type="text" class="form-control" id="id_progetto" placeholder="Opzionale">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer" style="border-top: 1px solid #334155;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
-                <button type="button" class="btn btn-success" id="btnSalva" style="background-color: #10b981; border: none;">Salva</button>
-            </div>
+        <div class="toolbar">
+            <button class="btn btn-secondary" onclick="exportData()">Esporta backup JSON</button>
+            <label class="btn btn-secondary">Importa backup<input type="file" accept=".json" hidden onchange="importData(event)"></label>
+            <button class="btn btn-danger" onclick="resetData()">Azzera dati</button>
         </div>
-    </div>
+    </main>
 </div>
-
-<script src="https://jsdelivr.net"></script>
+<dialog id="formDialog" style="border:none; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin:auto; padding:20px; width:100%; max-width:500px;">
+    <h2 id="formTitle" style="margin-bottom:20px; color:#1e293b; font-size:20px;">Nuovo Recruiter</h2>
+    <form id="entityForm" class="form" onsubmit="window.salvaRecord(event)">
+        <div id="formFields" class="form"></div>
+        <div class="actions">
+            <button class="btn btn-secondary" type="button" onclick="document.getElementById('formDialog').close()">Annulla</button>
+            <button class="btn btn-primary" type="submit">Salva</button>
+        </div>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Configurazione automatica basata sulle specifiche tcms-nexus-platform Core
-    const SUPABASE_URL = "https://supabase.co"; // Automaticamente sovrascritto dal sistema
-    const SUPABASE_KEY = "your-anon-key";
-    
-    // Inizializzazione sicura e protetta contro i crash di rete
-    const supabaseClient = window.supabase && window.supabase.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+ window.addEventListener('DOMContentLoaded', () => {   
+    const APP_VERSION = '3.3';
+    const supabaseUrl = "https://leqdagalrhwwuuqitjsc.supabase.co";
+    const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+ const sections = [
+        { cat: 'recruiters', label: 'Recruiters', title: 'Recruiter Registrati', btn: '+ Nuovo Recruiter', fb: 'Nessun recruiter trovato nel database cloud.' },
+        { cat: 'companies', label: 'Aziende Target', title: 'Aziende Mappate', btn: '+ Nuova Azienda', fb: 'Nessuna azienda registrata.' },
+        { cat: 'people', label: 'Personale', title: 'Anagrafica Persone', btn: '+ Nuova Persona', fb: 'Nessuna persona presente.' },
+        { cat: 'sites', label: 'Cantieri', title: 'Gestione Cantieri', btn: '+ Nuovo Cantiere', fb: 'Nessun cantiere attivo.' }
+    ];
 
-    let currentActiveType = 'market_signals';
-    let editRecordId = null;
+    const fieldsConfig = {
+        recruiters: [
+            { id: 'name', label: 'Nome Recruiter', type: 'text', required: true },
+            { id: 'company', label: 'Azienda di Appartenenza', type: 'text', required: true },
+            { id: 'status', label: 'Status', type: 'select', options: ['Attivo', 'Inanimato', 'Da Contattare'] }
+        ],
+        companies: [
+            { id: 'company', label: 'Ragione Sociale', type: 'text', required: true },
+            { id: 'status', label: 'Status Mappatura', type: 'select', options: ['Target', 'Gia Contattata', 'Partner'] }
+        ],
+        people: [
+            { id: 'name', label: 'Nome Completo', type: 'text', required: true },
+            { id: 'role', label: 'Rolo Tecnico', type: 'text', required: true },
+            { id: 'status', label: 'Disponibilita', type: 'select', options: ['Disponibile', 'Occupato', 'In ASPI'] }
+        ],
+        sites: [
+            { id: 'title', label: 'Nome Cantiere', type: 'text', required: true },
+            { id: 'company', label: 'Committente', type: 'text', required: true },
+            { id: 'status', label: 'Avanzamento', type: 'select', options: ['Avviato', 'In Progresso', 'Chiuso'] }
+        ]
+    };
+
+    const schema = {
+        recruiters: ['Nome', 'Azienda', 'Status'],
+        companies: ['Azienda', 'Status'],
+        people: ['Nome', 'Rolo', 'Disponibilita'],
+        sites: ['Cantiere', 'Committente', 'Status']
+    };
+
+    let currentActiveType = 'recruiters';
     let db = { recruiters: [], companies: [], people: [], sites: [] };
+    let editRecordId = null;
+
+    function buildNav() {
+        const container = document.getElementById('navLinks');
+        container.innerHTML = sections.map(s => `
+            <a href="#" class="nav-link ${s.cat === currentActiveType ? 'active' : ''}" data-cat="${s.cat}">${s.label}</a>
+        `).join('');
+        
+        document.querySelectorAll('.nav-link').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentActiveType = e.target.getAttribute('data-cat');
+                buildNav();
+                renderAll();
+            });
+        });
+    }
+    function renderAll() {
+        const currentSection = sections.find(s => s.cat === currentActiveType);
+        document.getElementById('pageTitle').innerText = 'TCMS NEXUS - ' + currentSection.label;
+        document.getElementById('addBtn').innerText = currentSection.btn;
+        document.getElementById('tableTitle').innerText = currentSection.title;
+
+        const headarr = schema[currentActiveType];
+        document.getElementById('tableHead').innerHTML = `<tr>${headarr.map(h => `<th>${h}</th>`).join('')}<th>Azioni</th></tr>`;
+
+        const tbody = document.getElementById('tableBody');
+        const currentData = db[currentActiveType];
+
+        if (!currentData || currentData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${headarr.length + 1}" class="fallback">${currentSection.fb}</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = currentData.map(rec => {
+            const cells = fieldsConfig[currentActiveType].map(f => `<td>${rec[f.id] || ''}</td>`).join('');
+            return `<tr>${cells}<td><button class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="editRecord('${rec.id}')">Modifica</button></td></tr>`;
+        }).join('');
+    }
 
     async function caricaDatiDaSupabase() {
         try {
-            const statusEl = document.getElementById('loadingStatus');
-            const tableEl = document.getElementById('dataTable');
-            
-            if (!supabaseClient) {
-                if (statusEl) statusEl.innerText = "Configurazione client Supabase non completata.";
-                return;
+            for (let s of sections) {
+                let { data, error } = await supabaseClient.from(s.cat).select('*');
+                if (error) throw error;
+                db[s.cat] = data || [];
             }
-
-            const { data, error } = await supabaseClient.from(currentActiveType).select('*').limit(30);
-            if (error) throw error;
-
-            const tbody = document.getElementById('tableBody');
-            if (tbody) {
-                tbody.innerHTML = '';
-                if (data && data.length > 0) {
-                    data.forEach(row => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td><b>${row.title || row.name || 'Segnale Senza Titolo'}</b></td><td>${row.origin_id ? row.origin_id.substring(0,8) + '...' : '-'}</td><td><span class="badge bg-success">Sincronizzato</span></td>`;
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nessun dato presente nel Cloud.</td></tr>';
-                }
-            }
-
-            if (statusEl) statusEl.style.display = 'none';
-            if (tableEl) tableEl.style.display = 'table';
+            renderAll();
         } catch (err) {
-            console.error("Errore scaricamento dati:", err);
-            const statusEl = document.getElementById('loadingStatus');
-            if (statusEl) statusEl.innerText = "Errore di sincronizzazione.";
+            console.error("Errore caricamento Supabase:", err);
         }
     }
 
-    window.salvaRecord = async (e) => {
-        if (e && e.preventDefault) e.preventDefault();
+    document.getElementById('addBtn').addEventListener('click', () => {
+        editRecordId = null;
+        document.getElementById('formTitle').innerText = sections.find(s => s.cat === currentActiveType).btn;
+        buildFormFields();
+        document.getElementById('formDialog').showModal();
+    });
 
-        const record = {
-            origin_id: document.getElementById('id_origine')?.value || '',
-            observer_id: document.getElementById('id_osservatore')?.value || '',
-            project_id: document.getElementById('id_progetto')?.value || ''
-        };
+    function buildFormFields(record = null) {
+        const container = document.getElementById('formFields');
+        container.innerHTML = fieldsConfig[currentActiveType].map(f => {
+            const val = record ? (record[f.id] || '') : '';
+            if (f.type === 'select') {
+                return `
+                    <div class="form-group">
+                        <label>${f.label}</label>
+                        <select id="${f.id}" name="${f.id}">
+                            ${f.options.map(o => `<option value="${o}" ${o === val ? 'selected' : ''}>${o}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            return `
+                <div class="form-group">
+                    <label>${f.label}</label>
+                    <input type="${f.type}" id="${f.id}" name="${f.id}" value="${val}" ${f.required ? 'required' : ''}>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.editRecord = function(id) {
+        editRecordId = id;
+        const record = db[currentActiveType].find(r => String(r.id) === String(id));
+        if (!record) return;
+        document.getElementById('formTitle').innerText = "Modifica";
+        buildFormFields(record);
+        document.getElementById('formDialog').showModal();
+    };
+
+    window.salvaRecord = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const record = {};
+        fieldsConfig[currentActiveType].forEach(f => {
+            record[f.id] = formData.get(f.id);
+        });
 
         try {
-            // SISTEMA AUTO-RIPARANTE: Sanitizzazione e iniezione parametri obbligatori
-            const cleanRecord = {
-                origin_id: record.origin_id.trim() || null,
-                observer_id: record.observer_id.trim() || null,
-                project_id: record.project_id.trim() || null
-            };
-
-            if (currentActiveType === 'market_signals') {
-                cleanRecord.signal_type = 'manual';
-                cleanRecord.title = 'Segnale Manuale di Test';
-            }
-
-            if (!supabaseClient) throw new Error("Client Supabase offline.");
-
-            let error;
             if (editRecordId) {
-                const res = await supabaseClient.from(currentActiveType).update(cleanRecord).eq('id', editRecordId);
-                error = res.error;
+                let { error } = await supabaseClient.from(currentActiveType).update(record).eq('id', editRecordId);
+                if (error) throw error;
             } else {
-                const res = await supabaseClient.from(currentActiveType).insert([cleanRecord]);
-                error = res.error;
+                let { error } = await supabaseClient.from(currentActiveType).insert([record]);
+                if (error) throw error;
             }
-
-            if (error) throw error;
-
-            const modalEl = document.getElementById('addModal');
-            if (modalEl) {
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) modalInstance.hide();
-            }
-
-            alert('Segnale salvato nel Cloud con successo!');
+            document.getElementById('formDialog').close();
             await caricaDatiDaSupabase();
-
         } catch (err) {
-            console.error("Errore bloccante durante il salvataggio:", err);
-            alert("Rifiuto Database Supabase: " + err.message);
+            console.error("Errore salvataggio:", err);
         }
     };
 
     window.exportData = function() {
-        alert('Esportazione backup avviata...');
+        const rows = [['Tipologia', 'Campo 1', 'Campo 2', 'Status']];
+        const add = (cat, arr) => arr.forEach(x => rows.push([cat, x.name || x.title || x.company || '', x.company || x.role || '', x.status || '']));
+        add('Recruiter', db.recruiters);
+        add('Azienda', db.companies);
+        add('Persona', db.people);
+        add('Cantiere', db.sites);
+        const csv = rows.map(r => r.map(v => '"' + String(v).replaceAll('"', '""') + '"').join(';')).join('\n');
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'TCMS_NEXUS_RIEPILOGO_' + new Date().getTime() + '.csv';
+        a.click();
     };
 
     window.resetData = async function() {
-        if (confirm('Azzera definitivamente i record di test?')) {
-            alert('Reset completato.');
+        if (confirm('Azzera definitivamente tutti i dati sul Cloud Supabase?')) {
+            try {
+                for (let s of sections) {
+                    await supabaseClient.from(s.cat).delete().neq('id', 0);
+                }
+                await caricaDatiDaSupabase();
+            } catch (err) {
+                console.error("Errore reset:", err);
+            }
         }
     };
 
     window.toggleMobileNav = function() {
         const sb = document.getElementById('sidebar');
-        };
-    if (typeof buildNav === 'function') buildNav();
-    if (typeof caricaDatiDaSupabase === 'function') caricaDatiDaSupabase();
+        sb.style.display = sb.style.display === 'block' ? 'none' : 'block';
+    };
+
+    buildNav();
+    caricaDatiDaSupabase();
+});
 </script>
 </body>
 </html>
