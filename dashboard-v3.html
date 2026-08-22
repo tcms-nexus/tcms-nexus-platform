@@ -104,14 +104,22 @@
     const supabaseUrl = "https://leqdagalrhwwuuqitjsc.supabase.co";
     const supabaseKey = "sb_publishable_5PctWn8m8gL668Pj3px_XQ_h7ckNf6t";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
- const sections = [
-        { cat: 'recruiters', label: 'Recruiters', title: 'Recruiter Registrati', btn: '+ Nuovo Recruiter', fb: 'Nessun recruiter trovato nel database cloud.' },
-        { cat: 'companies', label: 'Aziende Target', title: 'Aziende Mappate', btn: '+ Nuova Azienda', fb: 'Nessuna azienda registrata.' },
-        { cat: 'people', label: 'Personale', title: 'Anagrafica Persone', btn: '+ Nuova Persona', fb: 'Nessuna persona presente.' },
-        { cat: 'sites', label: 'Cantieri', title: 'Gestione Cantieri', btn: '+ Nuovo Cantiere', fb: 'Nessun cantiere attivo.' }
-    ];
+  const sections = [
+     { cat: 'market_signals', label: '📡 Radar Segnali', title: 'Segnali di Mercato Intercettati', btn: '+ Inserisci Segnale Manuale', fb: 'Nessun segnale intercettato dal Radar al momento.' },
+     { cat: 'recruiters', label: 'Recruiters', title: 'Recruiter Registrati', btn: '+ Nuovo Recruiter', fb: '...' },
+     { cat: 'companies', label: 'Aziende Target', title: 'Aziende Mappate', btn: '+ Nuova Azienda', fb: '...' },
+     { cat: 'people', label: 'Personale', title: 'Anagrafica Persone', btn: '+ Nuova Persona', fb: '...' },
+     { cat: 'sites', label: 'Cantieri', title: 'Gestione Cantieri', btn: '+ Nuovo Cantiere', fb: 'Nessun...' }
+ ];
+
 
     const fieldsConfig = {
+            market_signals: [
+        { id: 'origine_id', label: 'ID Origine / Fonte (UUID)', type: 'text', required: true },
+        { id: 'osservatore_id', label: 'ID Osservatore (UUID)', type: 'text', required: false },
+        { id: 'progetto_id', label: 'ID Progetto Associato (UUID)', type: 'text', required: false }
+    ],
+
         recruiters: [
             { id: 'name', label: 'Nome Recruiter', type: 'text', required: true },
             { id: 'company', label: 'Azienda di Appartenenza', type: 'text', required: true },
@@ -134,14 +142,15 @@
     };
 
     const schema = {
+           market_signals: ['ID Origine', 'ID Osservatore', 'ID Progetto'], 
         recruiters: ['Nome', 'Azienda', 'Status'],
         companies: ['Azienda', 'Status'],
         people: ['Nome', 'Rolo', 'Disponibilita'],
         sites: ['Cantiere', 'Committente', 'Status']
     };
 
-    let currentActiveType = 'recruiters';
-    let db = { recruiters: [], companies: [], people: [], sites: [] };
+    let currentActiveType = 'market_signals';
+    let db = market_signals:[], recruiters: [], companies: [], people: [], sites: [] };
     let editRecordId = null;
 
     function buildNav() {
