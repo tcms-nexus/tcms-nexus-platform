@@ -260,7 +260,7 @@
                 project_id: record.project_id?.trim() || null,
                 signal_type: record.signal_type || 'manual',
                 title: record.title?.trim() || 'Segnale Manuale di Test'
-            };
+            }
 
             if (editRecordId) {
                 let { error } = await supabaseClient.from(currentActiveType).update(cleanRecord).eq('id', editRecordId);
